@@ -12,7 +12,7 @@ struct ContentView: View {
     
     var body: some View {
         if showHomeView {
-            HomeView()
+            RootView()
         } else {
             BoxBreathingView {
                 showHomeView = true

@@ -21,51 +21,45 @@ struct HomeView: View {
     let savingsProgress: Double    = 0.46   // toward 90-day savings goal
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            UntiltTheme.Color.warmWhite
-                .ignoresSafeArea()
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 0) {
 
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 0) {
-
-                    headerView
-                        .padding(.horizontal, UntiltTheme.Spacing.s5)
-                        .padding(.top, UntiltTheme.Spacing.s3)
-                        .padding(.bottom, UntiltTheme.Spacing.s4)
-                        .background(UntiltTheme.Color.lavender100)
-
-                    VStack(alignment: .leading, spacing: UntiltTheme.Spacing.s3) {
-
-                        heroRow
-                            .padding(.top, UntiltTheme.Spacing.s4)
-
-                        crisisBanner
-
-                        InsightCardView(
-                            time: "Today's insight · 9:00 AM",
-                            title: "You resisted an urge during last night's game",
-                            bodyText: "You opened DraftKings at 8:43 PM but completed your meditation session and returned to the home screen — a significant shift from three weeks ago.",
-                            bulletPoints: [
-                                "Your longest urge-free streak this week was 51 hours.",
-                                "You have meditated every day this week — your most consistent week yet."
-                            ],
-                            closingQuestion: "Are you noticing a difference in how you feel on days when you meditate?"
-                        )
-
-                        supportButton
-
-                        MeditationVideoShelfView()
-
-                        quickAccessGrid
-
-                    }
+                headerView
                     .padding(.horizontal, UntiltTheme.Spacing.s5)
-                    .padding(.bottom, UntiltTheme.Size.navBarHeight + UntiltTheme.Spacing.s4)
-                }
-            }
+                    .padding(.top, UntiltTheme.Spacing.s3)
+                    .padding(.bottom, UntiltTheme.Spacing.s4)
+                    .background(UntiltTheme.Color.lavender100)
 
-            tabBar
+                VStack(alignment: .leading, spacing: UntiltTheme.Spacing.s3) {
+
+                    heroRow
+                        .padding(.top, UntiltTheme.Spacing.s4)
+
+                    crisisBanner
+
+                    InsightCardView(
+                        time: "Today's insight · 9:00 AM",
+                        title: "You resisted an urge during last night's game",
+                        bodyText: "You opened DraftKings at 8:43 PM but completed your meditation session and returned to the home screen — a significant shift from three weeks ago.",
+                        bulletPoints: [
+                            "Your longest urge-free streak this week was 51 hours.",
+                            "You have meditated every day this week — your most consistent week yet."
+                        ],
+                        closingQuestion: "Are you noticing a difference in how you feel on days when you meditate?"
+                    )
+
+                    supportButton
+
+                    MeditationVideoShelfView()
+
+                    quickAccessGrid
+
+                }
+                .padding(.horizontal, UntiltTheme.Spacing.s5)
+                .padding(.bottom, UntiltTheme.Size.navBarHeight + UntiltTheme.Spacing.s4)
+            }
         }
+        .background(UntiltTheme.Color.warmWhite)
         .ignoresSafeArea(edges: .bottom)
     }
 
@@ -229,22 +223,6 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Tab Bar
-    private var tabBar: some View {
-        HStack {
-            ForEach(TabItem.allCases) { tab in
-                TabBarItem(tab: tab, isActive: tab == .today)
-            }
-        }
-        .padding(.horizontal, UntiltTheme.Spacing.s2)
-        .frame(height: UntiltTheme.Size.navBarHeight)
-        .background(UntiltTheme.Color.white)
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(UntiltTheme.Color.border)
-                .frame(height: 0.5)
-        }
-    }
 }
 
 // MARK: - Quick Access Card
@@ -288,33 +266,36 @@ private struct QuickAccessCard: View {
 
 // MARK: - Tab Bar Items
 enum TabItem: String, CaseIterable, Identifiable {
-    case today     = "Today"
-    case support   = "Meditations"
-    case progress  = "Progress"
-    case resources = "Resources"
+    case today      = "Today"
+    case meditations = "Meditations"
+    case journal    = "Journal"
+    case progress   = "Progress"
+    case resources  = "Resources"
 
     var id: String { rawValue }
 
     var icon: String {
         switch self {
-        case .today:     return "house"
-        case .support:   return "figure.mind.and.body"
-        case .progress:  return "chart.line.uptrend.xyaxis"
-        case .resources: return "books.vertical"
+        case .today:       return "house"
+        case .meditations: return "figure.mind.and.body"
+        case .journal:     return "square.and.pencil"
+        case .progress:    return "chart.line.uptrend.xyaxis"
+        case .resources:   return "books.vertical"
         }
     }
 
     var activeIcon: String {
         switch self {
-        case .today:     return "house.fill"
-        case .support:   return "figure.mind.and.body.circle.fill"
-        case .progress:  return "chart.line.uptrend.xyaxis"
-        case .resources: return "books.vertical.fill"
+        case .today:       return "house.fill"
+        case .meditations: return "figure.mind.and.body.circle.fill"
+        case .journal:     return "square.and.pencil.circle.fill"
+        case .progress:    return "chart.line.uptrend.xyaxis"
+        case .resources:   return "books.vertical.fill"
         }
     }
 }
 
-private struct TabBarItem: View {
+struct TabBarItem: View {
     let tab: TabItem
     let isActive: Bool
 
