@@ -1,0 +1,558 @@
+{
+  "builtTestProducts" : [
+    {
+      "binaryPath" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicPackageTests.xctest/Contents/MacOS/UntiltLogicPackageTests",
+      "packagePath" : "/Users/abrahamrubin/Untilt/Logic",
+      "productName" : "UntiltLogicPackageTests"
+    }
+  ],
+  "copyCommands" : {
+
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.UntiltLogic-arm64-apple-macosx26.0-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogic.build/sources",
+      "importPath" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/Sources/UntiltLogic/SharedTypes.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogic.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "UntiltLogic",
+      "moduleOutputPath" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/Modules/UntiltLogic.swiftmodule",
+      "objects" : [
+        "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogic.build/SharedTypes.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogic.build/include/UntiltLogic-Swift.h",
+        "-swift-version",
+        "5",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "-g",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "logic"
+      ],
+      "outputFileMapPath" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogic.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogic.build/SharedTypes.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/Modules/UntiltLogic.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/abrahamrubin/Untilt/Logic/Sources/UntiltLogic/SharedTypes.swift"
+      ],
+      "tempsPath" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogic.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.UntiltLogicPackageTests-arm64-apple-macosx26.0-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicPackageTests.build/sources",
+      "importPath" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicPackageTests.derived/runner.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/Modules/UntiltLogicTests.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicPackageTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "UntiltLogicPackageTests",
+      "moduleOutputPath" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/Modules/UntiltLogicPackageTests.swiftmodule",
+      "objects" : [
+        "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicPackageTests.build/runner.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicPackageTests.build/include/UntiltLogicPackageTests-Swift.h",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "-g",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "logic"
+      ],
+      "outputFileMapPath" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicPackageTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicPackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/Modules/UntiltLogicPackageTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicPackageTests.derived/runner.swift"
+      ],
+      "tempsPath" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicPackageTests.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.UntiltLogicTests-arm64-apple-macosx26.0-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicTests.build/sources",
+      "importPath" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/Tests/UntiltLogicTests/StreakCalculatorTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/Modules/UntiltLogic.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "UntiltLogicTests",
+      "moduleOutputPath" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/Modules/UntiltLogicTests.swiftmodule",
+      "objects" : [
+        "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicTests.build/StreakCalculatorTests.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-swift-version",
+        "5",
+        "-enable-experimental-feature",
+        "StrictConcurrency",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "-g",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "logic"
+      ],
+      "outputFileMapPath" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicTests.build/StreakCalculatorTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/Modules/UntiltLogicTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/abrahamrubin/Untilt/Logic/Tests/UntiltLogicTests/StreakCalculatorTests.swift"
+      ],
+      "tempsPath" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicTests.build",
+      "wholeModuleOptimization" : false
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "UntiltLogic" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "UntiltLogic",
+      "-package-name",
+      "logic",
+      "-c",
+      "/Users/abrahamrubin/Untilt/Logic/Sources/UntiltLogic/SharedTypes.swift",
+      "-I",
+      "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogic.build/include/UntiltLogic-Swift.h",
+      "-swift-version",
+      "5",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      "-g",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "logic",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "UntiltLogicPackageTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "UntiltLogicPackageTests",
+      "-package-name",
+      "logic",
+      "-c",
+      "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicPackageTests.derived/runner.swift",
+      "-I",
+      "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicPackageTests.build/include/UntiltLogicPackageTests-Swift.h",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      "-g",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "logic",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "UntiltLogicTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "UntiltLogicTests",
+      "-package-name",
+      "logic",
+      "-c",
+      "/Users/abrahamrubin/Untilt/Logic/Tests/UntiltLogicTests/StreakCalculatorTests.swift",
+      "-I",
+      "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-swift-version",
+      "5",
+      "-enable-experimental-feature",
+      "StrictConcurrency",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      "-g",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "logic",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "UntiltLogic" : [
+
+    ],
+    "UntiltLogicPackageTests" : [
+      "UntiltLogicTests",
+      "UntiltLogic"
+    ],
+    "UntiltLogicTests" : [
+      "UntiltLogic"
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+    "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicPackageTests.derived/runner.swift" : {
+      "inputs" : [
+
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicPackageTests.derived/runner.swift"
+        }
+      ]
+    }
+  },
+  "traitConfiguration" : {
+    "default" : {
+
+    }
+  },
+  "writeCommands" : {
+    "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogic.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/Sources/UntiltLogic/SharedTypes.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogic.build/sources"
+    },
+    "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicPackageTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicPackageTests.derived/runner.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicPackageTests.build/sources"
+    },
+    "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicPackageTests.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogic.build/SharedTypes.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicPackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicTests.build/StreakCalculatorTests.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicPackageTests.product/Objects.LinkFileList"
+    },
+    "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/abrahamrubin/Untilt/Logic/Tests/UntiltLogicTests/StreakCalculatorTests.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicTests.build/sources"
+    },
+    "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+    }
+  }
+}

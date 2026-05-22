@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicTests.build/master.swiftdeps"
+  },
+  "/Users/abrahamrubin/Untilt/Logic/Tests/UntiltLogicTests/StreakCalculatorTests.swift": {
+    "dependencies": "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicTests.build/StreakCalculatorTests.d",
+    "object": "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicTests.build/StreakCalculatorTests.swift.o",
+    "swiftmodule": "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicTests.build/StreakCalculatorTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicTests.build/StreakCalculatorTests.swiftdeps",
+    "diagnostics": "/Users/abrahamrubin/Untilt/Logic/.build/arm64-apple-macosx/debug/UntiltLogicTests.build/StreakCalculatorTests.dia"
+  }
+}
