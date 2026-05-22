@@ -7,6 +7,7 @@ enum OnboardingStep {
     case welcome
     case sobrietyDate
     case weeklySpend
+    case gateSetup
     case done
 }
 
@@ -17,6 +18,7 @@ struct OnboardingView: View {
     @State private var weeklySpend: String = ""
     @State private var appleUserID: String = ""
     @State private var authError: String?
+    @State private var selectedGatingApps: Set<GamblingApp> = []
 
     var onComplete: () -> Void
 
@@ -46,8 +48,19 @@ struct OnboardingView: View {
 
             case .weeklySpend:
                 WeeklySpendStep(spend: $weeklySpend) {
-                    saveProfileAndFinish()
+                    withAnimation { step = .gateSetup }
                 }
+                .transition(.asymmetric(
+                    insertion: .move(edge: .trailing).combined(with: .opacity),
+                    removal: .move(edge: .leading).combined(with: .opacity)
+                ))
+
+            case .gateSetup:
+                GateSetupView(
+                    selectedApps: $selectedGatingApps,
+                    onSkip: { saveProfileAndFinish(gateConfigured: false) },
+                    onContinue: { saveProfileAndFinish(gateConfigured: true) }
+                )
                 .transition(.asymmetric(
                     insertion: .move(edge: .trailing).combined(with: .opacity),
                     removal: .move(edge: .leading).combined(with: .opacity)
@@ -74,13 +87,15 @@ struct OnboardingView: View {
     }
 
     // MARK: - Persist and exit onboarding
-    private func saveProfileAndFinish() {
+    private func saveProfileAndFinish(gateConfigured: Bool = false) {
         let spend = Double(weeklySpend.filter { $0.isNumber || $0 == "." }) ?? 0
         let profile = UserProfile(
             appleUserID: appleUserID,
             sobrietyStartDate: sobrietyDate,
             weeklySpend: spend
         )
+        profile.gatedApps = selectedGatingApps.map(\.id)
+        profile.gateConfigured = gateConfigured
         modelContext.insert(profile)
         try? modelContext.save()
         withAnimation { onComplete() }
@@ -157,7 +172,7 @@ private struct SobrietyDateStep: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            OnboardingHeader(step: 1, of: 2, title: "When did you last gamble?",
+            OnboardingHeader(step: 1, of: 3, title: "When did you last gamble?",
                              subtitle: "This sets your Days Clean counter. Be honest — only you can see this.")
 
             DatePicker(
@@ -187,7 +202,7 @@ private struct WeeklySpendStep: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            OnboardingHeader(step: 2, of: 2,
+            OnboardingHeader(step: 2, of: 3,
                              title: "How much did you spend gambling per week?",
                              subtitle: "An estimate is fine. This lets Untilt calculate how much you're saving.")
 
@@ -221,7 +236,7 @@ private struct WeeklySpendStep: View {
 }
 
 // MARK: - Shared components
-private struct OnboardingHeader: View {
+struct OnboardingHeader: View {
     let step: Int
     let of: Int
     let title: String

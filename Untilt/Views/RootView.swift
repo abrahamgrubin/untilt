@@ -24,7 +24,7 @@ struct RootView: View {
         case .journal:
             NavigationStack { JournalView() }
         case .progress:
-            PlaceholderView(title: "Progress", icon: "chart.line.uptrend.xyaxis")
+            ProgressTabView()
         case .resources:
             ResourcesView()
         }
