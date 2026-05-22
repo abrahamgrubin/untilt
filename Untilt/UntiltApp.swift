@@ -31,10 +31,33 @@ struct UntiltApp: App {
         }
     }()
 
+    @State private var gateTriggered = false
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            if gateTriggered {
+                MindfulGateView {
+                    gateTriggered = false
+                }
+                .modelContainer(container)
+            } else {
+                ContentView()
+                    .modelContainer(container)
+                    .onOpenURL { url in
+                        handleIncomingURL(url)
+                    }
+            }
         }
-        .modelContainer(container)
+    }
+
+    /// Handles untilt://gate?returnURL=<encoded-url> launched by the iOS Shortcut.
+    private func handleIncomingURL(_ url: URL) {
+        guard url.scheme == "untilt", url.host == "gate" else { return }
+        if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+           let returnItem = components.queryItems?.first(where: { $0.name == "returnURL" }),
+           let returnURLString = returnItem.value {
+            UserDefaults.standard.set(returnURLString, forKey: "returnAppURL")
+        }
+        gateTriggered = true
     }
 }

@@ -20,9 +20,9 @@ struct RootView: View {
         case .today:
             HomeView()
         case .meditations:
-            PlaceholderView(title: "Meditations", icon: "figure.mind.and.body")
+            MeditationsTabView()
         case .journal:
-            PlaceholderView(title: "Journal", icon: "square.and.pencil")
+            NavigationStack { JournalView() }
         case .progress:
             PlaceholderView(title: "Progress", icon: "chart.line.uptrend.xyaxis")
         case .resources:

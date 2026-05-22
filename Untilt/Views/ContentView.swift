@@ -1,27 +1,30 @@
 import SwiftUI
-//
-//  ContentView.swift
-//  Untilt
-//
-//  Created by Abraham Rubin on 5/11/26.
-//
-
+import SwiftData
 
 struct ContentView: View {
-    @State private var showHomeView = false
-    
+    @Query private var profiles: [UserProfile]
+    @State private var onboardingComplete = false
+
+    private var hasProfile: Bool { !profiles.isEmpty }
+
     var body: some View {
-        if showHomeView {
-            RootView()
-        } else {
-            BoxBreathingView {
-                showHomeView = true
+        Group {
+            if hasProfile || onboardingComplete {
+                RootView()
+            } else {
+                OnboardingView {
+                    onboardingComplete = true
+                }
             }
         }
+        .animation(.easeInOut(duration: 0.4), value: hasProfile)
     }
 }
 
 #Preview {
     ContentView()
+        .modelContainer(for: [UserProfile.self, UrgeEvent.self,
+                               JournalEntry.self, MeditationCompletion.self,
+                               MilestoneRecord.self], inMemory: true)
 }
 

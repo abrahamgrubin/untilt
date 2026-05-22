@@ -1,24 +1,50 @@
 import SwiftUI
+import SwiftData
 
 // MARK: - Home View
-// Main dashboard screen. Matches the Fitbit-inspired layout from the prototype:
-//   1. Header (top nav)
-//   2. Hero row (recovery ring + metric pills)
-//   3. Crisis banner
-//   4. Daily insight card
-//   5. Talk to support CTA
-//   6. Meditation video shelf
-//   7. Quick access grid
-
 struct HomeView: View {
 
-    // In a real app these would come from a ViewModel / AppState
-    let dayNumber: Int          = 23
-    let programLength: Int      = 90
-    let moneySaved: String      = "$1,840"
-    let meditationMins: Int     = 47
-    let meditationProgress: Double = 0.65   // weekly goal progress
-    let savingsProgress: Double    = 0.46   // toward 90-day savings goal
+    @Query private var profiles: [UserProfile]
+    @Query(sort: \UrgeEvent.timestamp, order: .reverse) private var urgeEvents: [UrgeEvent]
+    @Query(sort: \MeditationCompletion.timestamp, order: .reverse) private var completions: [MeditationCompletion]
+
+    @State private var showCompass = false
+    @State private var insightText: String? = nil
+    @State private var insightLoading = false
+
+    private var profile: UserProfile? { profiles.first }
+
+    private let programLength = 30  // outer ring shows progress to next milestone
+
+    private var dayNumber: Int {
+        guard let profile else { return 0 }
+        let cal = Calendar.current
+        return cal.dateComponents([.day], from: cal.startOfDay(for: profile.sobrietyStartDate),
+                                  to: cal.startOfDay(for: Date())).day ?? 0
+    }
+
+    private var moneySaved: String {
+        guard let profile else { return "$0" }
+        let weeks = Double(dayNumber) / 7.0
+        let saved = weeks * profile.weeklySpend
+        return String(format: "$%.0f", saved)
+    }
+
+    private var meditationMins: Int {
+        let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date())!
+        return completions.filter { $0.timestamp > weekAgo }.reduce(0) { $0 + $1.durationMinutes }
+    }
+
+    private var meditationProgress: Double {
+        let goal = 60.0
+        return min(Double(meditationMins) / goal, 1.0)
+    }
+
+    private var savingsProgress: Double {
+        guard let profile, let goal = profile.savingsGoal, goal > 0 else { return 0 }
+        let weeks = Double(dayNumber) / 7.0
+        return min((weeks * profile.weeklySpend) / goal, 1.0)
+    }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -37,16 +63,7 @@ struct HomeView: View {
 
                     crisisBanner
 
-                    InsightCardView(
-                        time: "Today's insight · 9:00 AM",
-                        title: "You resisted an urge during last night's game",
-                        bodyText: "You opened DraftKings at 8:43 PM but completed your meditation session and returned to the home screen — a significant shift from three weeks ago.",
-                        bulletPoints: [
-                            "Your longest urge-free streak this week was 51 hours.",
-                            "You have meditated every day this week — your most consistent week yet."
-                        ],
-                        closingQuestion: "Are you noticing a difference in how you feel on days when you meditate?"
-                    )
+                    liveInsightCard
 
                     supportButton
 
@@ -61,6 +78,68 @@ struct HomeView: View {
         }
         .background(UntiltTheme.Color.warmWhite)
         .ignoresSafeArea(edges: .bottom)
+        .sheet(isPresented: $showCompass) { CompassChatView() }
+        .task { await loadInsightIfNeeded() }
+    }
+
+    // MARK: - Live Insight Card
+    private var liveInsightCard: some View {
+        Group {
+            if insightLoading {
+                RoundedRectangle(cornerRadius: UntiltTheme.Radius.xl)
+                    .fill(UntiltTheme.Color.white)
+                    .frame(height: 140)
+                    .overlay(ProgressView())
+                    .overlay(RoundedRectangle(cornerRadius: UntiltTheme.Radius.xl)
+                        .stroke(UntiltTheme.Color.border, lineWidth: 0.5))
+            } else if let text = insightText {
+                InsightCardView(
+                    time: "Today's insight",
+                    title: String(text.prefix(80)),
+                    bodyText: text.count > 80 ? String(text.dropFirst(80)) : "",
+                    bulletPoints: [],
+                    closingQuestion: ""
+                )
+            } else {
+                InsightCardView(
+                    time: "Today's insight",
+                    title: "Check in with yourself today",
+                    bodyText: "How are you feeling right now? Tap Ask Compass to reflect.",
+                    bulletPoints: [],
+                    closingQuestion: "What's one small thing you're proud of today?"
+                )
+            }
+        }
+    }
+
+    private func loadInsightIfNeeded() async {
+        // Cache key: "compass_insight_YYYY-MM-DD"
+        let dateKey = "compass_insight_\(DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .none))"
+        if let cached = UserDefaults.standard.string(forKey: dateKey) {
+            insightText = cached
+            return
+        }
+        guard !insightLoading else { return }
+        insightLoading = true
+        do {
+            let context = buildQuickContext()
+            let text = try await CompassService.shared.generateInsight(context: context)
+            insightText = text
+            UserDefaults.standard.set(text, forKey: dateKey)
+        } catch {
+            // Fall through to fallback card
+        }
+        insightLoading = false
+    }
+
+    private func buildQuickContext() -> String {
+        let resisted = urgeEvents.filter { $0.completed }.count
+        let slipped  = urgeEvents.filter { !$0.completed }.count
+        return """
+        Days clean: \(dayNumber)
+        Recent urge events: \(urgeEvents.count) (\(resisted) resisted, \(slipped) slipped)
+        Meditation minutes this week: \(meditationMins)
+        """
     }
 
     // MARK: - Header
@@ -105,7 +184,7 @@ struct HomeView: View {
         HStack(alignment: .center, spacing: UntiltTheme.Spacing.s3 + 2) {
             RecoveryRingView(
                 dayNumber: dayNumber,
-                programLength: programLength,
+                programLength: 30,
                 meditationProgress: meditationProgress,
                 savingsProgress: savingsProgress
             )
@@ -165,9 +244,7 @@ struct HomeView: View {
 
     // MARK: - Support Button
     private var supportButton: some View {
-        Button {
-            // Navigate to chatbot
-        } label: {
+        Button { showCompass = true } label: {
             HStack(spacing: UntiltTheme.Spacing.s2) {
                 Image(systemName: "message")
                     .font(.system(size: 17, weight: .medium))

@@ -45,12 +45,26 @@ enum DurationFilter: String, CaseIterable {
 }
 
 struct MeditationSession: Identifiable {
-    let id = UUID()
+    let id: String              // stable string ID for MeditationCompletion references
     let title: String
     let durationLabel: String   // e.g. "3:00"
     let durationMinutes: Int
     let category: SessionCategory
     let level: String
+    /// Remote audio/video URL. Nil for sessions not yet produced.
+    let contentURL: URL?
+
+    init(id: String = UUID().uuidString, title: String, durationLabel: String,
+         durationMinutes: Int, category: SessionCategory, level: String,
+         contentURL: URL? = nil) {
+        self.id = id
+        self.title = title
+        self.durationLabel = durationLabel
+        self.durationMinutes = durationMinutes
+        self.category = category
+        self.level = level
+        self.contentURL = contentURL
+    }
 
     var filterBucket: DurationFilter {
         switch durationMinutes {
