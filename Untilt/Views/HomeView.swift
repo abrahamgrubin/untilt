@@ -58,12 +58,12 @@ struct HomeView: View {
 
                 VStack(alignment: .leading, spacing: UntiltTheme.Spacing.s3) {
 
-                    heroRow
-                        .padding(.top, UntiltTheme.Spacing.s4)
+//                    heroRow
+//                        .padding(.top, UntiltTheme.Spacing.s4)
 
                     crisisBanner
-
-                    liveInsightCard
+                        .padding(.top, UntiltTheme.Spacing.s4)
+//                    liveInsightCard
 
                     supportButton
 
@@ -136,7 +136,7 @@ struct HomeView: View {
         let resisted = urgeEvents.filter { $0.completed }.count
         let slipped  = urgeEvents.filter { !$0.completed }.count
         return """
-        Days clean: \(dayNumber)
+        Days without a bet: \(dayNumber)
         Recent urge events: \(urgeEvents.count) (\(resisted) resisted, \(slipped) slipped)
         Meditation minutes this week: \(meditationMins)
         """

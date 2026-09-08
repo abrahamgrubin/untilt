@@ -16,10 +16,7 @@ actor CompassService {
 
     static let shared = CompassService()
 
-    private let apiKey: String = {
-        // Read from Info.plist key CLAUDE_API_KEY (set via xcconfig)
-        Bundle.main.infoDictionary?["CLAUDE_API_KEY"] as? String ?? ""
-    }()
+    private let apiKey: String = APIKeys.claudeAPIKey
 
     private let model = "claude-sonnet-4-5"
     private let endpoint = URL(string: "https://api.anthropic.com/v1/messages")!
@@ -31,9 +28,13 @@ actor CompassService {
 
     Your role:
     - Talk users through urges using mindfulness techniques
-    - When relevant, suggest 2–3 meditation session options by duration (e.g. "Would you prefer a 2, 5, or 10 minute session?")
+    - When relevant, suggest the user try a box breathing exercise. The app has a built-in guided box \
+    breathing session that the user can launch directly from this chat — a button will appear automatically \
+    when you mention it. So feel free to recommend "box breathing" naturally; you do NOT need to add any \
+    special tags or disclaimers. Never say you "can't launch" something — the app handles that for you.
     - Surface crisis resources (1-800-522-4700 National Problem Gambling Helpline, text 988) when the user signals acute distress
     - For daily insights: reference a specific recent data point, interpret it, end with one open coaching question
+    - Do not offer suggestions or advice for the user. Only ask questions and help them work through their emotions and feelings.
 
     Tone: calm, warm, conversational. Never clinical. Never preachy. Never use the word "relapse".
     If you don't know something, say so simply. Keep responses concise — 2–4 sentences unless the user asks for more.

@@ -14,6 +14,7 @@ struct CompassChatView: View {
     @State private var inputText = ""
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var showBoxBreathing = false
 
     /// Pre-seeded opening when launched from a Slip notification
     var slipContext: String?
@@ -28,7 +29,7 @@ struct CompassChatView: View {
                         .foregroundStyle(UntiltTheme.Color.slate)
                 }
                 Spacer()
-                VStack(spacing: 2) {
+                VStack(spacing: 0) {
                     Text("Compass")
                         .font(UntiltTheme.Font.heading3)
                         .foregroundStyle(UntiltTheme.Color.slate)
@@ -37,13 +38,13 @@ struct CompassChatView: View {
                         .foregroundStyle(UntiltTheme.Color.muted)
                 }
                 Spacer()
-                Color.clear.frame(width: 32)
+//                Color.clear.frame(width: 32)
             }
             .padding(.horizontal, UntiltTheme.Spacing.s5)
             .padding(.vertical, UntiltTheme.Spacing.s3)
             .background(UntiltTheme.Color.white)
             .overlay(alignment: .bottom) {
-                Rectangle().fill(UntiltTheme.Color.border).frame(height: 0.5)
+                Rectangle().fill(UntiltTheme.Color.border).frame(height: 0.8)
             }
 
             // Messages
@@ -51,7 +52,7 @@ struct CompassChatView: View {
                 ScrollView {
                     LazyVStack(spacing: UntiltTheme.Spacing.s3) {
                         ForEach(messages) { msg in
-                            MessageBubble(message: msg)
+                            MessageBubble(message: msg, showBoxBreathing: $showBoxBreathing)
                                 .id(msg.id)
                         }
                         if isLoading {
@@ -106,6 +107,9 @@ struct CompassChatView: View {
         }
         .ignoresSafeArea(edges: .bottom)
         .onAppear { startConversation() }
+        .fullScreenCover(isPresented: $showBoxBreathing) {
+            BoxBreathingView(onComplete: { showBoxBreathing = false })
+        }
     }
 
     // MARK: - Start conversation
@@ -192,25 +196,65 @@ private func contextString(daysClean: Int,
 // MARK: - Message Bubble
 private struct MessageBubble: View {
     let message: CompassMessage
+    @Binding var showBoxBreathing: Bool
 
     var isUser: Bool { message.role == .user }
+
+    /// Keywords that indicate Compass is suggesting box breathing / meditation
+    private static let breathingKeywords = [
+        "box breathing",
+        "breathing exercise",
+        "breathing session",
+        "guided breathing",
+        "deep breathing",
+        "breathe together",
+        "try breathing",
+        "start breathing"
+    ]
+
+    /// Whether the message mentions a breathing exercise the user can launch
+    private var hasBoxBreathingAction: Bool {
+        guard !isUser else { return false }
+        let lower = message.content.lowercased()
+        return Self.breathingKeywords.contains { lower.contains($0) }
+    }
 
     var body: some View {
         HStack {
             if isUser { Spacer(minLength: 48) }
-            Text(message.content)
-                .font(UntiltTheme.Font.bodySmall)
-                .foregroundStyle(isUser ? .white : UntiltTheme.Color.slate)
-                .lineSpacing(4)
-                .padding(.horizontal, UntiltTheme.Spacing.s4)
-                .padding(.vertical, UntiltTheme.Spacing.s3)
-                .background(isUser ? UntiltTheme.Color.lavender700 : UntiltTheme.Color.white)
-                .clipShape(RoundedRectangle(cornerRadius: UntiltTheme.Radius.lg))
-                .overlay(
-                    isUser ? nil :
-                    RoundedRectangle(cornerRadius: UntiltTheme.Radius.lg)
-                        .stroke(UntiltTheme.Color.border, lineWidth: 0.5)
-                )
+            VStack(alignment: .leading, spacing: UntiltTheme.Spacing.s2) {
+                Text(message.content)
+                    .font(UntiltTheme.Font.bodySmall)
+                    .foregroundStyle(isUser ? .white : UntiltTheme.Color.slate)
+                    .lineSpacing(4)
+
+                if hasBoxBreathingAction {
+                    Button {
+                        showBoxBreathing = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "wind")
+                                .font(.system(size: 14, weight: .medium))
+                            Text("Start Box Breathing")
+                                .font(UntiltTheme.Font.bodySmall.weight(.medium))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, UntiltTheme.Spacing.s3)
+                        .padding(.vertical, UntiltTheme.Spacing.s2)
+                        .background(UntiltTheme.Color.lavender700)
+                        .clipShape(RoundedRectangle(cornerRadius: UntiltTheme.Radius.md))
+                    }
+                }
+            }
+            .padding(.horizontal, UntiltTheme.Spacing.s4)
+            .padding(.vertical, UntiltTheme.Spacing.s3)
+            .background(isUser ? UntiltTheme.Color.lavender700 : UntiltTheme.Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: UntiltTheme.Radius.lg))
+            .overlay(
+                isUser ? nil :
+                RoundedRectangle(cornerRadius: UntiltTheme.Radius.lg)
+                    .stroke(UntiltTheme.Color.border, lineWidth: 0.5)
+            )
             if !isUser { Spacer(minLength: 48) }
         }
     }

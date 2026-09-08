@@ -30,6 +30,14 @@ struct OnboardingView: View {
             case .welcome:
                 WelcomeStep(
                     onSignInWithApple: handleSignIn,
+                    onDevBypass: {
+                        // Simulator only — Sign in with Apple requires a passcode
+                        // which simulators cannot set. This path is compiled out on
+                        // real devices via #if targetEnvironment(simulator).
+                        appleUserID = "dev-sim-\(UUID().uuidString.prefix(8))"
+                        authError = nil
+                        withAnimation { step = .sobrietyDate }
+                    },
                     authError: authError
                 )
                 .transition(.asymmetric(
@@ -105,6 +113,7 @@ struct OnboardingView: View {
 // MARK: - Welcome Step
 private struct WelcomeStep: View {
     let onSignInWithApple: (Result<ASAuthorization, Error>) -> Void
+    let onDevBypass: () -> Void
     let authError: String?
 
     var body: some View {
@@ -138,6 +147,32 @@ private struct WelcomeStep: View {
             Spacer()
 
             VStack(spacing: UntiltTheme.Spacing.s3) {
+                // ── Real-device path ──────────────────────────────────────
+                // Sign in with Apple requires a device passcode, which iOS
+                // Simulator cannot set. On simulator we show a dev bypass
+                // button instead so you can test the full onboarding flow.
+                // The #if block is stripped from release builds entirely.
+#if targetEnvironment(simulator)
+                Button(action: onDevBypass) {
+                    HStack(spacing: UntiltTheme.Spacing.s2) {
+                        Image(systemName: "applelogo")
+                            .font(.system(size: 17, weight: .medium))
+                        Text("Continue (Simulator)")
+                            .font(.system(size: 16, weight: .medium))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: UntiltTheme.Size.buttonHeight)
+                    .background(Color.black)
+                    .clipShape(RoundedRectangle(cornerRadius: UntiltTheme.Radius.lg))
+                }
+                .buttonStyle(.plain)
+
+                Text("Dev bypass — Sign in with Apple is unavailable in Simulator")
+                    .font(UntiltTheme.Font.micro)
+                    .foregroundStyle(UntiltTheme.Color.muted)
+                    .multilineTextAlignment(.center)
+#else
                 SignInWithAppleButton(.signIn) { request in
                     request.requestedScopes = [.fullName, .email]
                 } onCompletion: { result in
@@ -158,6 +193,7 @@ private struct WelcomeStep: View {
                     .font(UntiltTheme.Font.micro)
                     .foregroundStyle(UntiltTheme.Color.muted)
                     .multilineTextAlignment(.center)
+#endif
             }
             .padding(.horizontal, UntiltTheme.Spacing.s5)
             .padding(.bottom, UntiltTheme.Spacing.s8)

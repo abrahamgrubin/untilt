@@ -37,8 +37,8 @@ struct JournalView: View {
         }
         .background(UntiltTheme.Color.warmWhite)
         .confirmationDialog("New journal entry", isPresented: $showModeSelector, titleVisibility: .visible) {
-            Button("Free-form") { activeMode = .freeWrite }
-            Button("Compass-prompted") { activeMode = .checkIn }
+            Button("Free Form") { activeMode = .freeWrite }
+            Button("AI Prompted") { activeMode = .checkIn }
             Button("Cancel", role: .cancel) {}
         }
         .sheet(item: $activeMode) { mode in

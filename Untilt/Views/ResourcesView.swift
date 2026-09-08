@@ -9,7 +9,7 @@ struct ResourcesView: View {
             VStack(alignment: .leading, spacing: UntiltTheme.Spacing.s6) {
                 crisisSection
                 therapySection
-                educationSection
+//                educationSection
             }
             .padding(.horizontal, UntiltTheme.Spacing.s5)
             .padding(.top, UntiltTheme.Spacing.s5)
@@ -53,12 +53,12 @@ struct ResourcesView: View {
             ResourceLinkCard(
                 title: "National Council on Problem Gambling",
                 description: "Directory of certified gambling counsellors across the US",
-                url: URL(string: "https://www.ncpgambling.org/help-treatment/find-a-therapist/")!
+                url: URL(string: "https://ipggc.org/directory/")!
             )
             ResourceLinkCard(
                 title: "Gamblers Anonymous",
                 description: "Find a local GA meeting or online group",
-                url: URL(string: "https://www.gamblersanonymous.org/ga/")!
+                url: URL(string: "https://www.gamblersanonymous.org/")!
             )
             ResourceLinkCard(
                 title: "Psychology Today — Therapist Finder",
@@ -82,11 +82,6 @@ struct ResourcesView: View {
                 title: "Cognitive Defusion — A CBT Technique",
                 description: "How to create distance from urge-driving thoughts",
                 url: URL(string: "https://positivepsychology.com/cognitive-defusion-techniques/")!
-            )
-            ResourceLinkCard(
-                title: "Understanding Urge Surfing",
-                description: "Ride out cravings without acting on them — a mindfulness technique",
-                url: URL(string: "https://www.addictioncenter.com/treatment/urge-surfing/")!
             )
         }
     }
