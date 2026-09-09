@@ -66,12 +66,20 @@ jobs:
       # secrets, resources); this just points both services at the new
       # image tag and forces a redeploy, rather than re-applying Terraform
       # on every code push.
+      #
+      # Important: the new revision is built from the FAMILY's latest
+      # registered definition (family name == service name here, per
+      # Infra/ecs.tf), not from whatever the service currently has
+      # running. Basing it on the running definition would silently
+      # re-deploy without any env/secret changes Terraform applied after
+      # the service's current revision was registered — which is exactly
+      # what happened once already (a DB_SSL var added via `terraform
+      # apply` got dropped on the next CI deploy because it based the new
+      # revision on the older, already-running one).
       - name: Update ECS services with the new image
         run: |
           for SERVICE in "$ECS_SERVICE_API" "$ECS_SERVICE_WORKER"; do
-            TASK_DEF_ARN=$(aws ecs describe-services --cluster "$ECS_CLUSTER" --services "$SERVICE" --query 'services[0].taskDefinition' --output text)
-            TASK_DEF_FAMILY=$(aws ecs describe-task-definition --task-definition "$TASK_DEF_ARN" --query 'taskDefinition.family' --output text)
-            NEW_TASK_DEF=$(aws ecs describe-task-definition --task-definition "$TASK_DEF_ARN" --query 'taskDefinition' | \
+            NEW_TASK_DEF=$(aws ecs describe-task-definition --task-definition "$SERVICE" --query 'taskDefinition' | \
               jq --arg IMAGE "${{ steps.ecr.outputs.registry }}/$ECR_REPOSITORY:${{ github.sha }}" \
               'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | .containerDefinitions[0].image = $IMAGE')
             NEW_ARN=$(aws ecs register-task-definition --cli-input-json "$NEW_TASK_DEF" --query 'taskDefinition.taskDefinitionArn' --output text)
