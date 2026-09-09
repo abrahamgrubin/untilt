@@ -1,0 +1,20 @@
+environment = "staging"
+aws_region  = "us-east-1"
+
+anthropic_api_key = "sk-ant-..."
+voyage_api_key    = "pa-..."
+
+apple_services_id = "com.yourteam.untilt.signin" # Apple Developer > Identifiers > Services IDs
+apple_team_id     = "XXXXXXXXXX"
+apple_key_id      = "XXXXXXXXXX"
+apple_private_key = <<-KEY
+  -----BEGIN PRIVATE KEY-----
+  ...contents of the .p8 file from Apple Developer > Keys...
+  -----END PRIVATE KEY-----
+KEY
+
+google_client_id     = "xxxxx.apps.googleusercontent.com"
+google_client_secret = "..."
+
+# Leave unset until a domain + ACM cert exist (see Infra/README.md)
+# acm_certificate_arn = "arn:aws:acm:us-east-1:...:certificate/..."

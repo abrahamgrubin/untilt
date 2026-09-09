@@ -1,0 +1,35 @@
+name: iOS TestFlight
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Untilt/**"
+      - "Untilt.xcodeproj/**"
+      - "Logic/**"
+      - ".github/workflows/ios-testflight.yml"
+  workflow_dispatch:
+
+jobs:
+  beta:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      # NOTE: this workflow assumes a fastlane/Fastfile with a `beta` lane
+      # (build + upload to TestFlight) already exists — that setup (match
+      # for code signing, an App Store Connect API key, a Fastfile/Appfile)
+      # is a one-time manual step done from a Mac with Xcode, not something
+      # this workflow bootstraps. Not yet done — see Infra/README.md.
+      - name: Build and upload to TestFlight
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.ASC_API_KEY_CONTENT }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+        run: bundle exec fastlane beta
