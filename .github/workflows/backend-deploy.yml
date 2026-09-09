@@ -55,9 +55,12 @@ jobs:
           REGISTRY: ${{ steps.ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t "$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" -t "$REGISTRY/$ECR_REPOSITORY:latest" .
+          # No ":latest" tag: the ECR repo is intentionally immutable
+          # (Infra/ecr.tf), and deploys only ever reference the
+          # commit-SHA tag below, so a floating "latest" tag isn't
+          # needed and would just break the second push on every run.
+          docker build -t "$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" .
           docker push "$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-          docker push "$REGISTRY/$ECR_REPOSITORY:latest"
 
       # Terraform (Infra/) owns the task definitions' shape (env vars,
       # secrets, resources); this just points both services at the new
