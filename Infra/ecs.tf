@@ -65,6 +65,9 @@ locals {
     { name = "DB_HOST", value = aws_db_instance.main.address },
     { name = "DB_PORT", value = "5432" },
     { name = "DB_NAME", value = aws_db_instance.main.db_name },
+    # RDS enforces TLS-only connections regardless of environment; this
+    # is deliberately independent of NODE_ENV (see Server/src/db/pool.ts).
+    { name = "DB_SSL", value = "true" },
     { name = "SQS_QUEUE_URL", value = aws_sqs_queue.session_summarization.url },
   ]
 }

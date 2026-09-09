@@ -27,6 +27,15 @@ const envSchema = z
     DB_USER: z.string().optional(),
     DB_PASSWORD: z.string().optional(),
 
+    // Decoupled from NODE_ENV on purpose: staging runs against real RDS
+    // (which requires TLS) but wants NODE_ENV=development for debug
+    // logging, so SSL enforcement needs its own explicit flag.
+    DB_SSL: z
+      .string()
+      .optional()
+      .default("false")
+      .transform((v) => v === "true"),
+
     SQS_QUEUE_URL: z.string().optional(),
   })
   .refine((env) => env.DATABASE_URL || (env.DB_HOST && env.DB_NAME && env.DB_USER && env.DB_PASSWORD), {
