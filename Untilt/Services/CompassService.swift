@@ -1,114 +1,84 @@
+import Combine
 import Foundation
 
 // MARK: - Compass Message
 struct CompassMessage: Identifiable {
     let id = UUID()
     let role: Role
-    let content: String
-    enum Role { case user, compass }
+    var content: String
+    var crisisResources: [CrisisResource] = []
+
+    enum Role { case user, compass, crisis }
 }
 
-// MARK: - Compass Service
-// Calls the Claude API with the Compass persona system prompt + user history context.
-// NOTE: API key is bundled for beta only. Move to server proxy before public launch.
+// MARK: - Compass Conversation
+// Owns one chat session's state against the real backend (see
+// docs/adr/0003-backend-migration.md — this replaced direct
+// client-to-Anthropic calls). One instance per CompassChatView presentation,
+// not a shared singleton, since a session ID is now part of the state.
+@MainActor
+final class CompassConversation: ObservableObject {
 
-actor CompassService {
+    @Published private(set) var messages: [CompassMessage] = []
+    @Published private(set) var isLoading = false
+    @Published var errorMessage: String?
 
-    static let shared = CompassService()
+    private var sessionId: String?
 
-    private let apiKey: String = APIKeys.claudeAPIKey
-
-    private let model = "claude-sonnet-4-5"
-    private let endpoint = URL(string: "https://api.anthropic.com/v1/messages")!
-
-    private let systemPrompt = """
-    You are Compass, a warm and non-judgmental recovery coach inside the Untilt app. \
-    Untilt helps people who are trying to quit gambling. You have access to the user's \
-    behavioral history, which will be provided at the start of each conversation.
-
-    Your role:
-    - Talk users through urges using mindfulness techniques
-    - When relevant, suggest the user try a box breathing exercise. The app has a built-in guided box \
-    breathing session that the user can launch directly from this chat — a button will appear automatically \
-    when you mention it. So feel free to recommend "box breathing" naturally; you do NOT need to add any \
-    special tags or disclaimers. Never say you "can't launch" something — the app handles that for you.
-    - Surface crisis resources (1-800-522-4700 National Problem Gambling Helpline, text 988) when the user signals acute distress
-    - For daily insights: reference a specific recent data point, interpret it, end with one open coaching question
-    - Do not offer suggestions or advice for the user. Only ask questions and help them work through their emotions and feelings.
-
-    Tone: calm, warm, conversational. Never clinical. Never preachy. Never use the word "relapse".
-    If you don't know something, say so simply. Keep responses concise — 2–4 sentences unless the user asks for more.
-    """
-
-    // MARK: - Proactive daily insight
-    /// Generates the daily insight card text. Cached per calendar day by the caller.
-    func generateInsight(context: String) async throws -> String {
-        let userPrompt = """
-        \(context)
-
-        Generate a single daily insight for this user. Follow this exact format:
-        1. Reference one specific data point from their history above
-        2. Interpret what it means for their recovery (1–2 sentences)
-        3. End with one open coaching question
-
-        Keep the total response under 100 words.
-        """
-        return try await send(messages: [["role": "user", "content": userPrompt]])
+    /// Starts a backend session and shows the opening message. Call once
+    /// when the chat view appears.
+    func start(mode: CompassMode, slipContext: String?) async {
+        do {
+            let session = try await BackendService.shared.startSession(mode: mode)
+            sessionId = session.sessionId
+            let opening = slipContext ?? "Hey — I'm here whenever you need me. How are you feeling right now?"
+            messages.append(CompassMessage(role: .compass, content: opening))
+        } catch {
+            errorMessage = "Couldn't reach Compass right now. Check your connection and try again."
+        }
     }
 
-    // MARK: - Reactive chat
-    /// Sends a user message and returns Compass's reply.
-    func chat(history: [CompassMessage], context: String, newMessage: String) async throws -> String {
-        var apiMessages: [[String: String]] = []
-
-        // Inject user context as first user message if history is fresh
-        if history.isEmpty {
-            apiMessages.append(["role": "user", "content": "My recovery context:\n\(context)"])
-            apiMessages.append(["role": "assistant", "content": "Thanks — I have your context. How are you doing right now?"])
-        }
-
-        for msg in history {
-            apiMessages.append(["role": msg.role == .user ? "user" : "assistant", "content": msg.content])
-        }
-        apiMessages.append(["role": "user", "content": newMessage])
-
-        return try await send(messages: apiMessages)
+    /// Ends the backend session (enqueues async memory-profile
+    /// summarization server-side). Call when the chat view is dismissed.
+    func end() {
+        guard let sessionId else { return }
+        Task { await BackendService.shared.endSession(sessionId: sessionId) }
     }
 
-    // MARK: - Core API call
-    private func send(messages: [[String: String]]) async throws -> String {
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
-        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-
-        let body: [String: Any] = [
-            "model": model,
-            "max_tokens": 512,
-            "system": systemPrompt,
-            "messages": messages
-        ]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            throw CompassError.apiError((response as? HTTPURLResponse)?.statusCode ?? 0)
+    func send(_ text: String) async {
+        guard let sessionId else {
+            errorMessage = "Compass isn't ready yet — give it a moment and try again."
+            return
         }
+        messages.append(CompassMessage(role: .user, content: text))
+        isLoading = true
+        errorMessage = nil
 
-        guard
-            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let content = (json["content"] as? [[String: Any]])?.first,
-            let text = content["text"] as? String
-        else {
-            throw CompassError.parseError
+        var replyIndex: Int?
+        do {
+            let stream = await BackendService.shared.sendMessage(sessionId: sessionId, text: text)
+            for try await event in stream {
+                switch event {
+                case .token(let token):
+                    if let idx = replyIndex {
+                        messages[idx].content.append(token)
+                    } else {
+                        messages.append(CompassMessage(role: .compass, content: token))
+                        replyIndex = messages.count - 1
+                    }
+                case .crisis(let message, let resources):
+                    messages.append(CompassMessage(role: .crisis, content: message, crisisResources: resources))
+                case .done:
+                    isLoading = false
+                case .failed(let reason):
+                    errorMessage = "Compass is unavailable right now. Try again in a moment."
+                    isLoading = false
+                    _ = reason // surfaced via logging server-side; kept generic for the user
+                }
+            }
+        } catch {
+            errorMessage = "Compass is unavailable right now. Try again in a moment."
         }
-        return text
+        isLoading = false
     }
-}
-
-enum CompassError: Error {
-    case apiError(Int)
-    case parseError
 }

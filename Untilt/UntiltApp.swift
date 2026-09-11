@@ -50,9 +50,20 @@ struct UntiltApp: App {
         }
     }
 
-    /// Handles untilt://gate?returnURL=<encoded-url> launched by the iOS Shortcut.
+    /// Routes untilt:// deep links: `gate` (launched by the iOS Shortcut)
+    /// and `auth-callback` (Cognito Hosted UI redirect — see AuthService).
+    /// ASWebAuthenticationSession's own completion handler catches the
+    /// callback in the normal case; this is the fallback path for when the
+    /// system delivers it via onOpenURL instead.
     private func handleIncomingURL(_ url: URL) {
-        guard url.scheme == "untilt", url.host == "gate" else { return }
+        guard url.scheme == "untilt" else { return }
+
+        if url.host == "auth-callback" {
+            Task { try? await AuthService.shared.handleCallback(url) }
+            return
+        }
+
+        guard url.host == "gate" else { return }
         if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
            let returnItem = components.queryItems?.first(where: { $0.name == "returnURL" }),
            let returnURLString = returnItem.value {

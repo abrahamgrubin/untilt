@@ -119,17 +119,14 @@ struct HomeView: View {
             insightText = cached
             return
         }
-        guard !insightLoading else { return }
-        insightLoading = true
-        do {
-            let context = buildQuickContext()
-            let text = try await CompassService.shared.generateInsight(context: context)
-            insightText = text
-            UserDefaults.standard.set(text, forKey: dateKey)
-        } catch {
-            // Fall through to fallback card
-        }
-        insightLoading = false
+        // TODO: the backend (Server/) has no dedicated insight-generation
+        // endpoint yet — the old implementation called Anthropic directly
+        // from the client, which is exactly what docs/adr/0003 moved away
+        // from. Rather than invent an ad hoc backend contract for this as
+        // a side effect of the auth/chat rewiring, this falls through to
+        // the generic fallback card below until a real /insight endpoint
+        // exists server-side.
+        _ = dateKey
     }
 
     private func buildQuickContext() -> String {
