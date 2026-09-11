@@ -66,7 +66,7 @@ sessionRouter.post("/:id/message", async (req: AuthedRequest, res) => {
     return;
   }
 
-  const crisis = await checkCrisis(message);
+  const crisis = await checkCrisis(message, session.mode);
   if (crisis.isCrisis) {
     req.log.warn(
       { event: "crisis_detected", source: crisis.source, sessionId: session.id, userId: req.userId },

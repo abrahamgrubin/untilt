@@ -1,5 +1,6 @@
 import { completeChat, MODELS } from "./claude.js";
 import { keywordCrisisMatch } from "./crisisKeywords.js";
+import type { CompassMode } from "./prompts.js";
 
 export type CrisisSource = "keyword" | "llm" | null;
 
@@ -14,34 +15,51 @@ export interface CrisisCheckResult {
 // prompt, deliberately decoupled from the main conversation's system
 // prompt/history, so a signal can never get lost in a compressed context
 // (PRD 13.3).
+//
+// This is a *rule*, not a pattern-matcher: earlier versions tried to
+// enumerate example phrases to exclude, which only ever covers the exact
+// wording already seen in a bug report and keeps missing new metaphorical
+// phrasing (e.g. "it feels heavy, like it's weighing me down" to describe
+// an urge). The rule below is meant to generalize: it asks whether the
+// message states or clearly implies intent to end life / harm someone, or
+// a present medical emergency — not whether the message "sounds intense."
 const CLASSIFIER_SYSTEM = `You are a safety classifier for a gambling-recovery support app. \
-Given a single user message, decide whether it signals an ACUTE CRISIS: \
-suicidal ideation, self-harm, or severe financial distress that suggests the \
-person may be in danger right now (e.g. "I lost everything and don't see a way out").
+The app's core exercise is "urge surfing": it deliberately prompts users to describe an urge \
+to gamble in vivid, embodied, emotionally intense language — heaviness, pressure, being pulled, \
+being consumed, wanting to escape the feeling, the urge "weighing them down" or "crushing" them. \
+Intensity, distress, and dramatic metaphor are the EXPECTED, DESIRED output of that exercise. \
+They are not, by themselves, evidence of anything else.
 
-Do NOT flag ordinary mindfulness/urge-surfing language. This app routinely asks \
-users to describe physical sensations as a coping technique — "I feel it in my \
-chest", "there's pressure in my stomach", "my hands are shaking", "my heart is \
-racing" are NORMAL answers to that technique, not medical or crisis signals, \
-even though they describe physical sensations. Only flag physical-sensation \
-language if it is paired with an actual statement of intent to harm oneself or \
-someone else, or a stated medical emergency (e.g. "I think I'm having a heart \
-attack", "I can't breathe and I'm alone" go beyond ordinary urge sensations).
+Classify a message as an ACUTE CRISIS only if it does at least one of these:
+1. States or clearly implies a wish to die, not exist, or end their life ("I don't want to be \
+here anymore", "I have no reason to keep going", "I want it to be over" in a life/suicide sense).
+2. States or clearly implies intent to physically harm themselves or someone else.
+3. Describes a present medical emergency (e.g. chest pain framed as "I think I'm having a heart \
+attack", not simply feeling pressure or a racing heart as a body sensation).
+4. Describes catastrophic, hopeless financial ruin from gambling in a way that reads as a person \
+in danger right now, not simply worry or regret (e.g. "I lost everything and I don't see a way \
+out" about their actual life circumstances).
 
-Examples that should be false: "I feel it in my chest, I feel pressure" / \
-"My stomach is in knots thinking about it" / "I'm so anxious right now" / \
-"I feel like I'm going to explode" / "I hate myself for gambling again".
-Examples that should be true: "I don't want to be here anymore" / "I'm going to \
-hurt myself" / "I have no reason to keep going" / "I lost everything and I don't \
-see a way out".
+Do NOT classify as crisis, no matter how intense the language:
+- Descriptions of an urge/craving itself — heavy, crushing, overwhelming, consuming, unbearable, \
+"weighing me down", pressure, a pulling or aching sensation — with no separate statement about \
+wanting to die or harm anyone. This is the exercise working as designed.
+- Ordinary physical sensations offered in response to a mindfulness prompt (racing heart, tight \
+chest, shaky hands, knot in the stomach) with no separate statement of harm intent.
+- General anxiety, frustration, shame, or self-criticism about gambling ("I hate myself for \
+gambling again", "I'm so anxious right now").
 
-Between genuinely ambiguous cases, still bias toward saying true — missing a \
-real crisis is far worse than a false alarm. But ordinary emotional or physical \
-descriptions with no stated intent to harm, and no stated medical emergency, are \
-not ambiguous: they are false. Respond with EXACTLY one word: "true" or "false". \
-Nothing else.`;
+If a message is genuinely ambiguous between an intense urge-surfing description and an actual \
+statement about wanting to die or harm someone, bias toward true — missing a real crisis is far \
+worse than a false alarm. But intensity or heaviness about the URGE ITSELF, with nothing said \
+about ending life or self-harm, is not ambiguous: it is false.
 
-export async function checkCrisis(message: string): Promise<CrisisCheckResult> {
+Respond with EXACTLY one word: "true" or "false". Nothing else.`;
+
+export async function checkCrisis(
+  message: string,
+  mode: CompassMode
+): Promise<CrisisCheckResult> {
   // Layer 1: deterministic keyword match. Fast, free, easy to audit —
   // checked first so an obvious signal never waits on a network call.
   if (keywordCrisisMatch(message)) {
@@ -50,11 +68,19 @@ export async function checkCrisis(message: string): Promise<CrisisCheckResult> {
 
   // Layer 2: LLM contextual pass. Either layer triggering is sufficient
   // (PRD Section 8) — this one exists specifically to catch what the
-  // keyword layer would miss.
+  // keyword layer would miss. The current exercise mode is passed in as
+  // context so the classifier isn't judging an isolated sentence blind —
+  // e.g. it knows "heavy, weighing me down" said during urge_surfing is
+  // the exercise's own prompt working, not a new signal.
+  const contextNote =
+    mode === "urge_surfing"
+      ? "[Context: this message was sent during a guided urge-surfing exercise.]\n"
+      : "";
+
   const verdict = await completeChat({
     model: MODELS.haiku,
     system: [{ text: CLASSIFIER_SYSTEM, cache: true }],
-    messages: [{ role: "user", content: message }],
+    messages: [{ role: "user", content: `${contextNote}${message}` }],
     maxTokens: 5,
   });
 
