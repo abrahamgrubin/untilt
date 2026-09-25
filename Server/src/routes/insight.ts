@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { AuthedRequest } from "../middleware/auth.js";
 import { requireAuth } from "../middleware/auth.js";
 import { checkInCard, generateInsight, insightSnapshotSchema } from "../ai/insight.js";
+import { CRISIS_RESOURCES } from "../ai/crisisResources.js";
 import { ensureUser } from "../db/repositories/users.js";
 import { getMemoryProfile } from "../db/repositories/memoryProfile.js";
 import { hasRecentCrisisEvent } from "../db/repositories/crisisEvents.js";
@@ -22,8 +23,19 @@ insightRouter.use(async (req: AuthedRequest, res, next) => {
   }
 });
 
+/**
+ * Check-in cards also carry the structured crisis resources (with `tel:`
+ * links), so the app can render tap-to-call rows instead of plain text,
+ * matching the chat's crisis response. Same single source as the chat:
+ * ai/crisisResources.ts.
+ */
 function toResponse(localDate: string, insight: StoredInsight) {
-  return { localDate, kind: insight.kind, ...insight.card };
+  return {
+    localDate,
+    kind: insight.kind,
+    ...insight.card,
+    ...(insight.kind === "check_in" ? { resources: CRISIS_RESOURCES } : {}),
+  };
 }
 
 // POST /insight: returns today's Compass insight card, generating it on the

@@ -198,7 +198,15 @@ describe("POST /insight", () => {
     expect(res.status).toBe(200);
     expect(json.kind).toBe("check_in");
     expect(json.bullets.join(" ")).toContain("1-800-522-4700");
+    expect(json.resources.map((r: any) => r.telHref)).toEqual(["tel:+18005224700", "tel:988"]);
     expect(completeChat).not.toHaveBeenCalled();
+  });
+
+  it("returns resources only on check-in cards", async () => {
+    completeChat.mockResolvedValue(JSON.stringify(goodCard));
+    const json = await (await post(snapshot)).json();
+    expect(json.kind).toBe("insight");
+    expect(json.resources).toBeUndefined();
   });
 
   it("returns 503 and stores nothing when the model output is unusable", async () => {

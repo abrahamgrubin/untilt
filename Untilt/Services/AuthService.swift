@@ -110,6 +110,8 @@ final class AuthService: NSObject, ObservableObject {
             "code_verifier": verifier,
         ])
         KeychainStore.save(tokens: tokens)
+        // A new sign-in may be a different person on the same phone.
+        DailyInsightCache.clear()
         isSignedIn = true
     }
 
@@ -180,6 +182,7 @@ final class AuthService: NSObject, ObservableObject {
 
     func signOut() {
         KeychainStore.clear()
+        DailyInsightCache.clear()
         isSignedIn = false
     }
 

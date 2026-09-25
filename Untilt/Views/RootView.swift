@@ -3,6 +3,7 @@ import SwiftUI
 /// Root view after onboarding. Manages the 5-tab navigation shell.
 struct RootView: View {
     @State private var selectedTab: TabItem = .today
+    @ObservedObject private var notificationRouter = NotificationRouter.shared
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -12,6 +13,12 @@ struct RootView: View {
             tabBar
         }
         .ignoresSafeArea(edges: .bottom)
+        // A tapped notification opens Compass from the Today tab
+        // (HomeView), so switch there if the user was on another tab.
+        // `initial: true` also covers a tap that launched the app.
+        .onChange(of: notificationRouter.pendingCompassContext, initial: true) { _, context in
+            if context != nil { selectedTab = .today }
+        }
     }
 
     @ViewBuilder

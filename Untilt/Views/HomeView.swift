@@ -83,7 +83,9 @@ struct HomeView: View {
         .ignoresSafeArea(edges: .bottom)
         .sheet(isPresented: $showCompass) { CompassChatView(slipContext: compassSlipContext) }
         .task { await loadInsightIfNeeded() }
-        .onChange(of: notificationRouter.pendingCompassContext) { _, context in
+        // `initial: true` so a notification tapped while the app was closed
+        // (set before this view existed) still opens Compass.
+        .onChange(of: notificationRouter.pendingCompassContext, initial: true) { _, context in
             guard let context else { return }
             compassSlipContext = context
             showCompass = true
@@ -108,13 +110,21 @@ struct HomeView: View {
                     .overlay(RoundedRectangle(cornerRadius: UntiltTheme.Radius.xl)
                         .stroke(UntiltTheme.Color.border, lineWidth: 0.5))
             } else if let insight {
-                InsightCardView(
-                    time: insight.kind == .checkIn ? "Checking in" : "Today's insight",
-                    title: insight.title,
-                    bodyText: insight.body,
-                    bulletPoints: insight.bullets,
-                    closingQuestion: insight.question
-                )
+                let callableResources = insight.kind == .checkIn ? (insight.resources ?? []) : []
+                VStack(spacing: UntiltTheme.Spacing.s2) {
+                    InsightCardView(
+                        time: insight.kind == .checkIn ? "Checking in" : "Today's insight",
+                        title: insight.title,
+                        bodyText: insight.body,
+                        // On a check-in, the helplines are shown below as
+                        // tap-to-call rows instead of plain-text bullets.
+                        bulletPoints: callableResources.isEmpty ? insight.bullets : [],
+                        closingQuestion: insight.question
+                    )
+                    ForEach(callableResources) { resource in
+                        CrisisCallRow(resource: resource)
+                    }
+                }
             } else {
                 InsightCardView(
                     time: "Today's insight",
@@ -128,9 +138,6 @@ struct HomeView: View {
     }
 
     // MARK: - Daily Insight Loading
-
-    /// One cached card, replaced when the local date changes.
-    private static let insightCacheKey = "compass_daily_insight"
 
     /// Day counts for each milestone, in order. Mirrors `orderedMilestones`
     /// and `daysRequired` in ProgressTabView.swift (private there), so keep
@@ -153,9 +160,9 @@ struct HomeView: View {
         guard profile != nil else { return }
         let today = Self.localDateFormatter.string(from: Date())
 
-        if let data = UserDefaults.standard.data(forKey: Self.insightCacheKey),
-           let cached = try? JSONDecoder().decode(DailyInsight.self, from: data),
-           cached.localDate == today {
+        // DailyInsightCache only ever holds today's regular insight for the
+        // signed-in user (see BackendService.swift).
+        if let cached = DailyInsightCache.load(for: today) {
             insight = cached
             return
         }
@@ -167,9 +174,7 @@ struct HomeView: View {
         do {
             let fetched = try await BackendService.shared.fetchDailyInsight(buildInsightSnapshot(localDate: today))
             insight = fetched
-            if let data = try? JSONEncoder().encode(fetched) {
-                UserDefaults.standard.set(data, forKey: Self.insightCacheKey)
-            }
+            DailyInsightCache.save(fetched)
         } catch {
             insight = nil
         }
@@ -373,6 +378,53 @@ struct HomeView: View {
         }
     }
 
+}
+
+// MARK: - Crisis Call Row
+/// One tap-to-call helpline row, shown under a check-in card. Uses the
+/// resource's own `tel:` link from the backend.
+private struct CrisisCallRow: View {
+    let resource: CrisisResource
+
+    var body: some View {
+        if let url = URL(string: resource.telHref) {
+            Link(destination: url) {
+                HStack(spacing: UntiltTheme.Spacing.s3) {
+                    Image(systemName: "phone.fill")
+                        .font(UntiltTheme.Font.body)
+                        .foregroundStyle(UntiltTheme.Color.lavender700)
+                        .frame(width: UntiltTheme.Size.iconContainerSm,
+                               height: UntiltTheme.Size.iconContainerSm)
+                        .background(UntiltTheme.Color.lavender50)
+                        .clipShape(Circle())
+
+                    VStack(alignment: .leading, spacing: UntiltTheme.Spacing.s1) {
+                        Text(resource.name)
+                            .font(UntiltTheme.Font.bodySmall)
+                            .foregroundStyle(UntiltTheme.Color.slate)
+                        Text(resource.phone)
+                            .font(UntiltTheme.Font.caption)
+                            .foregroundStyle(UntiltTheme.Color.lavender700)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    Text("Call")
+                        .font(UntiltTheme.Font.caption)
+                        .foregroundStyle(UntiltTheme.Color.lavender700)
+                }
+                .padding(UntiltTheme.Spacing.s3)
+                .background(UntiltTheme.Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: UntiltTheme.Radius.lg))
+                .overlay(
+                    RoundedRectangle(cornerRadius: UntiltTheme.Radius.lg)
+                        .stroke(UntiltTheme.Color.border, lineWidth: 0.5)
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Call \(resource.name), \(resource.phone)")
+        }
+    }
 }
 
 // MARK: - Quick Access Card

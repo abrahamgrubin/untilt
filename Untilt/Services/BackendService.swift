@@ -35,9 +35,53 @@ struct DailyInsight: Codable, Equatable {
     let body: String
     let bullets: [String]
     let question: String
+    /// Present on check-in cards: the helplines, with `tel:` links, so they
+    /// can be shown as tap-to-call rows (same list the chat's crisis
+    /// response uses, from Server/src/ai/crisisResources.ts).
+    let resources: [CrisisResource]?
 }
 
-struct CrisisResource: Decodable, Identifiable {
+/// On-device cache for today's insight card, so reopening the Today tab
+/// doesn't hit the network.
+///
+/// Health-adjacent and per-user, so:
+/// - Check-in cards (served after a recent crisis) are never cached on the
+///   device. The server returns its stored card without a model call, so
+///   skipping the cache costs one quick request, and nothing about a crisis
+///   is left in `UserDefaults`.
+/// - The cache is cleared on every sign-in and sign-out (AuthService), so
+///   one person's card can never be shown to the next person who signs in
+///   on the same phone.
+enum DailyInsightCache {
+    private static let key = "compass_daily_insight"
+
+    /// Today's cached card, if there is one for `localDate`.
+    static func load(for localDate: String) -> DailyInsight? {
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let cached = try? JSONDecoder().decode(DailyInsight.self, from: data),
+              cached.localDate == localDate,
+              cached.kind == .insight else {
+            return nil
+        }
+        return cached
+    }
+
+    static func save(_ insight: DailyInsight) {
+        guard insight.kind == .insight else {
+            clear()
+            return
+        }
+        if let data = try? JSONEncoder().encode(insight) {
+            UserDefaults.standard.set(data, forKey: key)
+        }
+    }
+
+    static func clear() {
+        UserDefaults.standard.removeObject(forKey: key)
+    }
+}
+
+struct CrisisResource: Codable, Identifiable, Equatable {
     var id: String { name }
     let name: String
     let phone: String
