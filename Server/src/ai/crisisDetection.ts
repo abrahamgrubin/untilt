@@ -7,6 +7,12 @@ export type CrisisSource = "keyword" | "llm" | null;
 export interface CrisisCheckResult {
   isCrisis: boolean;
   source: CrisisSource;
+  // Set when layer 2 didn't actually run a successful classification (the
+  // Haiku call threw or timed out) and this result is the safe fallback
+  // rather than a real verdict. Lets the caller log it distinctly from a
+  // genuine LLM-detected crisis, without needing a DB schema change (the
+  // crisis_events.source column only allows 'keyword' | 'llm').
+  classifierFailed?: boolean;
 }
 
 // Independent, low-cost contextual pass (PRD 13.1) — catches implicit/
@@ -77,12 +83,22 @@ export async function checkCrisis(
       ? "[Context: this message was sent during a guided urge-surfing exercise.]\n"
       : "";
 
-  const verdict = await completeChat({
-    model: MODELS.haiku,
-    system: [{ text: CLASSIFIER_SYSTEM, cache: true }],
-    messages: [{ role: "user", content: `${contextNote}${message}` }],
-    maxTokens: 5,
-  });
+  // Fails toward safety: if the classifier call itself throws (timeout,
+  // rate limit, transient API error), that is exactly the ambiguous case
+  // the classifier's own instructions say to bias toward true for — an
+  // error is not evidence of "not crisis", and must never silently pass
+  // the message through to a normal chat reply.
+  let verdict: string;
+  try {
+    verdict = await completeChat({
+      model: MODELS.haiku,
+      system: [{ text: CLASSIFIER_SYSTEM, cache: true }],
+      messages: [{ role: "user", content: `${contextNote}${message}` }],
+      maxTokens: 5,
+    });
+  } catch {
+    return { isCrisis: true, source: "llm", classifierFailed: true };
+  }
 
   const isCrisis = verdict.trim().toLowerCase().startsWith("true");
   return { isCrisis, source: isCrisis ? "llm" : null };

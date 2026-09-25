@@ -1,5 +1,5 @@
 ---
-name: compass-safety-reviewer
+name: safety-reviewer
 description: Reviews changes to the Compass AI coach (persona and mode prompts, crisis detection, crisis resources, and the iOS chat code that displays them) for user-safety, tone and consistency problems. Use proactively after editing anything in Server/src/ai/, Server/src/routes/session.ts, Untilt/Services/CompassService.swift, Untilt/Views/CompassChatView.swift or Untilt/Views/ResourcesView.swift.
 tools: Read, Grep, Glob, Bash
 ---
@@ -28,8 +28,7 @@ Use `CONTEXT.md` for product terms (Slip, Soft Streak, Urge Event and so on).
 3. No keyword pattern was removed or narrowed without a stated reason. Any new regex compiles, is case-insensitive, and doesn't obviously miss common variants (contractions, "wanna", missing apostrophes).
 4. The classifier still fails toward safety: ambiguous means crisis, and an error or timeout doesn't silently pass as "not crisis". Flag it if a thrown error in `checkCrisis` would skip the crisis path.
 5. The classifier still distinguishes intense urge-surfing language from statements of intent to die or harm, and still gets mode context.
-6. Crisis numbers are identical everywhere: the National Problem Gambling Helpline is **1-800-522-4700** and the lifeline is **988** (call or text). Grep the whole repo for `800`, `GAMBLER`, `988` and `741741`, and flag any mismatch between `crisisResources.ts`, `ResourcesView.swift`, `CLAUDE.md` and `CONTEXT.md`.
-7. `CRISIS_RESPONSE_MESSAGE` stays calm and non-clinical, doesn't try to talk the user out of the crisis, and points clearly to the resources.
+6. `CRISIS_RESPONSE_MESSAGE` stays calm and non-clinical, doesn't try to talk the user out of the crisis, and points clearly to the resources.
 
 **Persona and tone (should fix)**
 8. Compass never says "relapse". Use "slip". Compass is never judgmental, preachy or clinical, and never claims to be a therapist.
