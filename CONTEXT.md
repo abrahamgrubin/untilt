@@ -53,13 +53,13 @@ A recorded instance of the Mindful Gate being triggered. The primary data event 
 ---
 
 **Resources Tab**
-A curated static library with three sections, in order: (1) Crisis lines — 1-800-GAMBLER, 988 text line, always visible at top; (2) Therapy finder — links to licensed gambling counsellor directories (e.g. NCPG); (3) Educational reads — articles on gambling addiction, CBT techniques, how urges work. Content is static, maintained in-app. Compass can deep-link into this tab when a user is in distress.
+A curated static library with three sections, in order: (1) Crisis lines — 1-800-522-4700, text 988, always visible at top; (2) Therapy finder — links to licensed gambling counsellor directories (e.g. NCPG); (3) Educational reads — articles on gambling addiction, CBT techniques, how urges work. Content is static, maintained in-app. Compass can deep-link into this tab when a user is in distress.
 
 **Progress Tab**
 Displays the user's full recovery history as a visual story. Four sections in order: (1) Streak calendar — GitHub-contribution-graph style, each day coloured clean/slip/no-data; (2) Milestones earned — badges for days clean and consistency markers; (3) Savings growth sparkline — cumulative money saved over time; (4) Urge frequency trend — how often the Mindful Gate has fired over time, showing reduction.
 
 **Onboarding Flow**
-The mandatory sequence a new user completes before reaching the home screen. Five steps: (1) Welcome screen; (2) Sign in with Apple; (3) Sobriety start date — "When did you last gamble?" — seeds Days Clean accurately; (4) Weekly spend declaration — seeds the Savings Estimate; (5) Mindful Gate setup — step-by-step Shortcuts installation with suggested gambling apps (DraftKings, FanDuel, etc.) to gate. User must gate at least one app before proceeding.
+The mandatory sequence a new user completes before reaching the home screen. Five steps: (1) Welcome screen; (2) Sign in via Amazon Cognito (Hosted UI + PKCE); (3) Sobriety start date — "When did you last gamble?" — seeds Days Clean accurately; (4) Weekly spend declaration — seeds the Savings Estimate; (5) Mindful Gate setup — step-by-step Shortcuts installation with suggested gambling apps (DraftKings, FanDuel, etc.) to gate. User must gate at least one app before proceeding.
 
 **Navigation**
 Five tabs: Today, Meditations, Journal, Progress, Resources. Compass is not a tab — it is accessible from Today (proactive insight card + "Ask Compass" button) and from inside the Journal tab (as the Compass-prompted entry mode).

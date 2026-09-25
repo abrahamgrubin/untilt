@@ -2,14 +2,27 @@
 
 Untilt is an iOS app that helps people quit gambling. It combines behavioral tracking, mindfulness tools, an AI recovery coach ("Compass"), and a "Mindful Gate" that intercepts gambling-app launches via an iOS Shortcut.
 
+Product terms (Slip, Soft Streak, Urge Event, Days Clean, etc.) are defined in the domain glossary:
+
+@CONTEXT.md
+
+## Repo Layout
+
+- `Untilt/` — iOS app source (SwiftUI). `Untilt.xcodeproj` uses folder-synced groups, so new files under `Untilt/` join the target automatically.
+- `Server/` — Node/TypeScript backend for Compass (Express, Postgres, SQS worker). Persona prompts, mode config and crisis detection live in `Server/src/ai/`.
+- `Infra/` — Terraform for AWS (VPC, ALB, ECS/Fargate, RDS, SQS, Cognito, ECR, GitHub OIDC). `terraform.tfvars` is local config; never print or commit secrets from it.
+- `Logic/` — `UntiltLogic` Swift package (pure, testable logic + `UntiltLogicTests`); run with `swift test` from `Logic/`.
+- `docs/` — architecture doc and ADRs (`docs/adr/`).
+- `.claude/` — project skills (`.claude/skills/`) and subagents (`.claude/agents/`).
+
 ## Architecture
 
 - **Pure SwiftUI + SwiftData** — no UIKit wrappers, no Combine (use async/await instead)
 - **Persistence**: SwiftData with CloudKit sync (`cloudKitDatabase: .automatic`)
 - **Auth**: Cognito Hosted UI via `ASWebAuthenticationSession` + PKCE (see `AuthService`)
 - **Backend**: REST API at `api.pinenoodle.com` behind an ALB, authenticated with Cognito access tokens (see `BackendService`)
-- **AI chat**: `CompassService` calls the Claude API directly (beta-only; will move to server proxy before public launch)
-- **Singletons**: Services use the `static let shared` pattern (`AuthService.shared`, `BackendService.shared`, `CompassService.shared`, `NotificationRouter.shared`)
+- **AI chat**: `CompassConversation` (in `CompassService.swift`) talks to the backend, which calls Claude and runs crisis detection server-side (see `docs/adr/0003-backend-migration.md`). The app no longer calls the Claude API directly.
+- **Singletons**: Services use the `static let shared` pattern (`AuthService.shared`, `BackendService.shared`, `NotificationRouter.shared`). Exception: `CompassConversation` is one instance per chat presentation, not a singleton, because it holds a session ID.
 
 ## Project Structure
 
@@ -26,7 +39,7 @@ Untilt/
 ├── Services/
 │   ├── AuthService.swift          # Cognito PKCE auth
 │   ├── BackendService.swift       # REST + SSE streaming to backend
-│   ├── CompassService.swift       # Direct Claude API calls (beta)
+│   ├── CompassService.swift       # CompassConversation: chat state via backend (SSE)
 │   └── NotificationRouter.swift   # Local notification deep-link routing
 ├── Theme/
 │   └── UntiltTheme.swift          # Design tokens (colors, fonts, spacing, radii)

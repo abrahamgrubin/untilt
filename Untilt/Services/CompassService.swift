@@ -8,7 +8,7 @@ struct CompassMessage: Identifiable {
     var content: String
     var crisisResources: [CrisisResource] = []
 
-    enum Role { case user, compass, crisis }
+    enum Role { case user, compass, crisis, findTherapist, followUpConsent }
 }
 
 // MARK: - Compass Conversation
@@ -43,6 +43,52 @@ final class CompassConversation: ObservableObject {
     func end() {
         guard let sessionId else { return }
         Task { await BackendService.shared.endSession(sessionId: sessionId) }
+    }
+
+    /// Appends a local-only prompt asking the user for their zip code, so
+    /// the "Find a Therapist" hand-off (architecture doc Section 9) can
+    /// build a location-filtered Psychology Today link. Deliberately a
+    /// purely client-side flow — no backend/model call. This is a simple
+    /// structured input, not something that needs (or should route
+    /// through) crisis-detection or the mode-specific conversation
+    /// orchestration, matching this app's general preference for a
+    /// deterministic path over an LLM one wherever one will do.
+    func presentFindTherapistPrompt() {
+        messages.append(CompassMessage(
+            role: .compass,
+            content: "I can help you find a gambling-specialized therapist nearby. What's your zip code?"
+        ))
+        messages.append(CompassMessage(role: .findTherapist, content: ""))
+    }
+
+    /// Appends a follow-up question once the Psychology Today search sheet
+    /// closes (architecture doc Section 9). Deliberately a normal
+    /// compass-role message, not a special yes/no bubble: the user's
+    /// reply flows through the regular `send()` pipeline like any other
+    /// turn, so it reaches the model and gets picked up by the existing
+    /// session-end memory-profile summarization (Section 4) for free --
+    /// no new backend/storage work needed, and no yes/no button forces a
+    /// binary answer onto something that's often more complicated than
+    /// that.
+    func appendTherapistFollowUp() {
+        messages.append(CompassMessage(
+            role: .compass,
+            content: "How did that feel? Did you reach out to anyone, or is there something making that feel hard right now?"
+        ))
+    }
+
+    /// Appends a structured yes/no prompt asking whether Compass should
+    /// check back in about a week if the user hasn't heard from a
+    /// therapist yet. Deterministic capture, not routed through the
+    /// model, since the answer drives an actual scheduling decision --
+    /// same reasoning as the zip-code bubble above and the
+    /// crisis-detection design: a structured input beats an LLM one
+    /// wherever the answer needs to be acted on programmatically.
+    func appendFollowUpConsentPrompt() {
+        messages.append(CompassMessage(
+            role: .followUpConsent,
+            content: "Would you like me to check back in about a week if you haven't heard back from a therapist?"
+        ))
     }
 
     func send(_ text: String) async {

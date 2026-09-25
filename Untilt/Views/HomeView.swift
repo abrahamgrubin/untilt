@@ -9,8 +9,10 @@ struct HomeView: View {
     @Query(sort: \MeditationCompletion.timestamp, order: .reverse) private var completions: [MeditationCompletion]
 
     @State private var showCompass = false
-    @State private var insightText: String? = nil
+    @State private var compassSlipContext: String?
+    @State private var insight: DailyInsight?
     @State private var insightLoading = false
+    @ObservedObject private var notificationRouter = NotificationRouter.shared
 
     private var profile: UserProfile? { profiles.first }
 
@@ -63,7 +65,8 @@ struct HomeView: View {
 
                     crisisBanner
                         .padding(.top, UntiltTheme.Spacing.s4)
-//                    liveInsightCard
+
+                    liveInsightCard
 
                     supportButton
 
@@ -78,8 +81,20 @@ struct HomeView: View {
         }
         .background(UntiltTheme.Color.warmWhite)
         .ignoresSafeArea(edges: .bottom)
-        .sheet(isPresented: $showCompass) { CompassChatView() }
+        .sheet(isPresented: $showCompass) { CompassChatView(slipContext: compassSlipContext) }
         .task { await loadInsightIfNeeded() }
+        .onChange(of: notificationRouter.pendingCompassContext) { _, context in
+            guard let context else { return }
+            compassSlipContext = context
+            showCompass = true
+            notificationRouter.pendingCompassContext = nil
+        }
+        .onChange(of: showCompass) { _, isShowing in
+            // Reset once the sheet closes so a plain tap on the "Ask
+            // Compass" button later doesn't accidentally reuse a stale
+            // notification-driven opening line.
+            if !isShowing { compassSlipContext = nil }
+        }
     }
 
     // MARK: - Live Insight Card
@@ -92,13 +107,13 @@ struct HomeView: View {
                     .overlay(ProgressView())
                     .overlay(RoundedRectangle(cornerRadius: UntiltTheme.Radius.xl)
                         .stroke(UntiltTheme.Color.border, lineWidth: 0.5))
-            } else if let text = insightText {
+            } else if let insight {
                 InsightCardView(
-                    time: "Today's insight",
-                    title: String(text.prefix(80)),
-                    bodyText: text.count > 80 ? String(text.dropFirst(80)) : "",
-                    bulletPoints: [],
-                    closingQuestion: ""
+                    time: insight.kind == .checkIn ? "Checking in" : "Today's insight",
+                    title: insight.title,
+                    bodyText: insight.body,
+                    bulletPoints: insight.bullets,
+                    closingQuestion: insight.question
                 )
             } else {
                 InsightCardView(
@@ -112,31 +127,92 @@ struct HomeView: View {
         }
     }
 
+    // MARK: - Daily Insight Loading
+
+    /// One cached card, replaced when the local date changes.
+    private static let insightCacheKey = "compass_daily_insight"
+
+    /// Day counts for each milestone, in order. Mirrors `orderedMilestones`
+    /// and `daysRequired` in ProgressTabView.swift (private there), so keep
+    /// the two in sync.
+    private static let milestoneDays = [7, 30, 60, 90, 180, 365, 730]
+
+    private static let localDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    /// Loads today's insight from the local cache, or from the backend on
+    /// the first open of the day. On any failure the generic card stays up
+    /// and the next appearance of this tab tries again.
     private func loadInsightIfNeeded() async {
-        // Cache key: "compass_insight_YYYY-MM-DD"
-        let dateKey = "compass_insight_\(DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .none))"
-        if let cached = UserDefaults.standard.string(forKey: dateKey) {
-            insightText = cached
+        guard profile != nil else { return }
+        let today = Self.localDateFormatter.string(from: Date())
+
+        if let data = UserDefaults.standard.data(forKey: Self.insightCacheKey),
+           let cached = try? JSONDecoder().decode(DailyInsight.self, from: data),
+           cached.localDate == today {
+            insight = cached
             return
         }
-        // TODO: the backend (Server/) has no dedicated insight-generation
-        // endpoint yet — the old implementation called Anthropic directly
-        // from the client, which is exactly what docs/adr/0003 moved away
-        // from. Rather than invent an ad hoc backend contract for this as
-        // a side effect of the auth/chat rewiring, this falls through to
-        // the generic fallback card below until a real /insight endpoint
-        // exists server-side.
-        _ = dateKey
+
+        guard !insightLoading else { return }
+        insightLoading = true
+        defer { insightLoading = false }
+
+        do {
+            let fetched = try await BackendService.shared.fetchDailyInsight(buildInsightSnapshot(localDate: today))
+            insight = fetched
+            if let data = try? JSONEncoder().encode(fetched) {
+                UserDefaults.standard.set(data, forKey: Self.insightCacheKey)
+            }
+        } catch {
+            insight = nil
+        }
     }
 
-    private func buildQuickContext() -> String {
-        let resisted = urgeEvents.filter { $0.completed }.count
-        let slipped  = urgeEvents.filter { !$0.completed }.count
-        return """
-        Days without a bet: \(dayNumber)
-        Recent urge events: \(urgeEvents.count) (\(resisted) resisted, \(slipped) slipped)
-        Meditation minutes this week: \(meditationMins)
-        """
+    private func buildInsightSnapshot(localDate: String) -> BackendService.InsightSnapshot {
+        let now = Date()
+        let calendar = Calendar.current
+        let weekAgo = calendar.date(byAdding: .day, value: -7, to: now) ?? now
+        let twoWeeksAgo = calendar.date(byAdding: .day, value: -14, to: now) ?? now
+
+        let lastWeekUrges = urgeEvents.filter { $0.timestamp > weekAgo }
+        let priorWeekUrges = urgeEvents.filter { $0.timestamp > twoWeeksAgo && $0.timestamp <= weekAgo }
+        let lastWeekMeditations = completions.filter { $0.timestamp > weekAgo }
+
+        // urgeEvents and completions are sorted newest first (see @Query).
+        let hoursSinceLastUrge = urgeEvents.first.map { max(0, now.timeIntervalSince($0.timestamp) / 3600) }
+
+        var seenTitles = Set<String>()
+        let recentTitles = lastWeekMeditations
+            .map { String($0.sessionTitle.prefix(80)) }
+            .filter { !$0.isEmpty && seenTitles.insert($0).inserted }
+            .prefix(3)
+
+        return BackendService.InsightSnapshot(
+            localDate: localDate,
+            daysClean: max(dayNumber, 0),
+            urgesLast7Days: .init(
+                resisted: lastWeekUrges.filter { $0.completed }.count,
+                slipped: lastWeekUrges.filter { $0.isSlip }.count
+            ),
+            urgesPrior7Days: .init(
+                resisted: priorWeekUrges.filter { $0.completed }.count,
+                slipped: priorWeekUrges.filter { $0.isSlip }.count
+            ),
+            hoursSinceLastUrge: hoursSinceLastUrge,
+            meditationLast7Days: .init(
+                sessions: lastWeekMeditations.count,
+                minutes: lastWeekMeditations.reduce(0) { $0 + $1.durationMinutes }
+            ),
+            recentMeditationTitles: Array(recentTitles),
+            nextMilestoneDays: Self.milestoneDays.first { $0 > dayNumber }
+        )
     }
 
     // MARK: - Header
@@ -219,7 +295,7 @@ struct HomeView: View {
 
             Group {
                 Text("In crisis? Call ") +
-                Text("1-800-GAMBLER")
+                Text("1-800-522-4700")
                     .fontWeight(.semibold) +
                 Text(" or text ") +
                 Text("988")

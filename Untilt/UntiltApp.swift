@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 @main
 struct UntiltApp: App {
@@ -32,6 +33,16 @@ struct UntiltApp: App {
     }()
 
     @State private var gateTriggered = false
+
+    init() {
+        // Registers NotificationRouter as the delegate for both local
+        // notification types this app schedules (the slip check-in in
+        // MindfulGateView and the therapist follow-up in CompassChatView
+        // -- architecture doc Section 9), so a tap actually routes back
+        // into Compass instead of just opening to whatever screen the
+        // app was last on.
+        UNUserNotificationCenter.current().delegate = NotificationRouter.shared
+    }
 
     var body: some Scene {
         WindowGroup {

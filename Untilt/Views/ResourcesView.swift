@@ -4,6 +4,8 @@ import SwiftUI
 // Static content: crisis lines → therapy finder → educational reads
 
 struct ResourcesView: View {
+    @State private var showFindTherapist = false
+
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: UntiltTheme.Spacing.s6) {
@@ -17,6 +19,9 @@ struct ResourcesView: View {
         }
         .background(UntiltTheme.Color.warmWhite)
         .navigationTitle("Resources")
+        .sheet(isPresented: $showFindTherapist) {
+            CompassChatView(entryAction: .findTherapist)
+        }
     }
 
     // MARK: Crisis Lines
@@ -58,13 +63,22 @@ struct ResourcesView: View {
             ResourceLinkCard(
                 title: "Gamblers Anonymous",
                 description: "Find a local GA meeting or online group",
-                url: URL(string: "https://www.gamblersanonymous.org/")!
+                url: URL(string: "https://gamblersanonymous.org/usa-meetings/")!
             )
-            ResourceLinkCard(
-                title: "Psychology Today — Therapist Finder",
-                description: "Search licensed therapists specialising in gambling addiction",
-                url: URL(string: "https://www.psychologytoday.com/us/therapists/gambling")!
-            )
+            // Routes through Compass instead of a static link (architecture
+            // doc Section 9) so it can ask for a zip code and hand off to a
+            // location-filtered Psychology Today search
+            // (?category=gambling), rather than the generic, unlocalized
+            // /us/therapists/gambling topic page.
+            Button {
+                showFindTherapist = true
+            } label: {
+                ResourceLinkCardContent(
+                    title: "Psychology Today — Therapist Finder",
+                    description: "Search licensed therapists specialising in gambling addiction near you"
+                )
+            }
+            .buttonStyle(.plain)
         }
     }
 
@@ -131,39 +145,64 @@ private struct CrisisLineCard: View {
 }
 
 // MARK: - Resource Link Card
+// Opens in the in-app Safari sheet (SafariView) rather than backgrounding
+// out to the Safari app, so tapping a resource doesn't feel like leaving
+// Untilt -- consistent with the Compass-driven Find-a-Therapist card
+// (architecture doc Section 9), which established this pattern first.
 private struct ResourceLinkCard: View {
     let title: String
     let description: String
     let url: URL
 
+    @State private var showSafari = false
+
     var body: some View {
-        Link(destination: url) {
-            HStack(alignment: .center, spacing: UntiltTheme.Spacing.s3) {
-                VStack(alignment: .leading, spacing: UntiltTheme.Spacing.s1 + 2) {
-                    Text(title)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(UntiltTheme.Color.slate)
-                        .multilineTextAlignment(.leading)
-                    Text(description)
-                        .font(UntiltTheme.Font.bodySmall)
-                        .foregroundStyle(UntiltTheme.Color.muted)
-                        .multilineTextAlignment(.leading)
-                        .lineSpacing(3)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "arrow.up.right")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(UntiltTheme.Color.lavender500)
-            }
-            .padding(UntiltTheme.Spacing.s4)
-            .background(UntiltTheme.Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: UntiltTheme.Radius.lg))
-            .overlay(
-                RoundedRectangle(cornerRadius: UntiltTheme.Radius.lg)
-                    .stroke(UntiltTheme.Color.border, lineWidth: 0.5)
-            )
+        Button {
+            showSafari = true
+        } label: {
+            ResourceLinkCardContent(title: title, description: description)
         }
         .buttonStyle(.plain)
+        .sheet(isPresented: $showSafari) {
+            SafariView(url: url)
+        }
+    }
+}
+
+// MARK: - Resource Link Card Content
+// Shared visual body for a resource card, factored out so a card that
+// needs to do something other than open a URL directly (e.g. the
+// Compass-driven "Find a Therapist" card above, architecture doc
+// Section 9) can still look identical to the plain-Link ones.
+private struct ResourceLinkCardContent: View {
+    let title: String
+    let description: String
+
+    var body: some View {
+        HStack(alignment: .center, spacing: UntiltTheme.Spacing.s3) {
+            VStack(alignment: .leading, spacing: UntiltTheme.Spacing.s1 + 2) {
+                Text(title)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(UntiltTheme.Color.slate)
+                    .multilineTextAlignment(.leading)
+                Text(description)
+                    .font(UntiltTheme.Font.bodySmall)
+                    .foregroundStyle(UntiltTheme.Color.muted)
+                    .multilineTextAlignment(.leading)
+                    .lineSpacing(3)
+            }
+            Spacer(minLength: 0)
+            Image(systemName: "arrow.up.right")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(UntiltTheme.Color.lavender500)
+        }
+        .padding(UntiltTheme.Spacing.s4)
+        .background(UntiltTheme.Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: UntiltTheme.Radius.lg))
+        .overlay(
+            RoundedRectangle(cornerRadius: UntiltTheme.Radius.lg)
+                .stroke(UntiltTheme.Color.border, lineWidth: 0.5)
+        )
     }
 }
 

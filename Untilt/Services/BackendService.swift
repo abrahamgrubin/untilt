@@ -19,6 +19,24 @@ enum ChatEvent {
     case failed(String)
 }
 
+/// Today's Compass insight card, as returned by `POST /insight`.
+/// Codable (not just Decodable) so HomeView can cache it for the day.
+struct DailyInsight: Codable, Equatable {
+    enum Kind: String, Codable {
+        /// Generated coaching insight.
+        case insight
+        /// Fixed, gentle check-in the backend serves after a recent crisis.
+        case checkIn = "check_in"
+    }
+
+    let localDate: String
+    let kind: Kind
+    let title: String
+    let body: String
+    let bullets: [String]
+    let question: String
+}
+
 struct CrisisResource: Decodable, Identifiable {
     var id: String { name }
     let name: String
@@ -140,6 +158,45 @@ actor BackendService {
             }
             pendingEvent = nil
         }
+    }
+
+    // MARK: - Daily insight (Today tab)
+
+    /// On-device activity numbers the backend needs to write today's
+    /// Compass insight (Server/src/ai/insight.ts). Numbers and meditation
+    /// catalogue titles only, never journal text.
+    struct InsightSnapshot: Encodable {
+        struct UrgeCounts: Encodable {
+            let resisted: Int
+            let slipped: Int
+        }
+
+        struct MeditationCounts: Encodable {
+            let sessions: Int
+            let minutes: Int
+        }
+
+        /// The user's local calendar date, `yyyy-MM-dd`.
+        let localDate: String
+        let daysClean: Int
+        let urgesLast7Days: UrgeCounts
+        let urgesPrior7Days: UrgeCounts
+        /// nil when there has never been an Urge Event.
+        let hoursSinceLastUrge: Double?
+        let meditationLast7Days: MeditationCounts
+        let recentMeditationTitles: [String]
+        /// nil once every milestone is earned.
+        let nextMilestoneDays: Int?
+    }
+
+    /// Returns today's insight card. The backend generates it on the first
+    /// request of the user's day and returns the same card after that.
+    func fetchDailyInsight(_ snapshot: InsightSnapshot) async throws -> DailyInsight {
+        var request = try await authedRequest(path: "/insight", method: "POST")
+        request.httpBody = try JSONEncoder().encode(snapshot)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try Self.checkOK(response, data: data)
+        return try JSONDecoder().decode(DailyInsight.self, from: data)
     }
 
     // MARK: - Shared request building
