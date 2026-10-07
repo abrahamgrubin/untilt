@@ -6,19 +6,16 @@ import { env } from "../config/env.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// RDS requires TLS regardless of NODE_ENV (staging intentionally runs
-// with NODE_ENV=development for debug logging, but still talks to real
-// RDS) — set explicitly via DB_SSL, not inferred from NODE_ENV. We
-// validate against Amazon's actual RDS CA bundle (committed at
-// certs/rds-global-bundle.pem, copied into the image by the Dockerfile)
-// rather than disabling certificate verification.
+// TLS is set explicitly via DB_SSL, not inferred from NODE_ENV. We verify
+// against the database provider's CA (DB_SSL_CA_FILE, e.g. Supabase's root
+// cert committed under certs/) rather than disabling certificate checks.
 function sslConfig() {
   if (!env.DB_SSL) return undefined;
-  const caPath = path.join(__dirname, "../../certs/rds-global-bundle.pem");
+  const caPath = path.resolve(__dirname, "../..", env.DB_SSL_CA_FILE);
   return { ca: readFileSync(caPath, "utf-8"), rejectUnauthorized: true };
 }
 
 export const pool = new Pool({
-  connectionString: env.databaseUrl,
+  connectionString: env.DATABASE_URL,
   ssl: sslConfig(),
 });

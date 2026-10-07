@@ -15,8 +15,8 @@ import { enqueueSessionSummarization } from "../jobs/queue.js";
 export const sessionRouter = Router();
 
 sessionRouter.use(requireAuth);
-// Lazily ensures a local `users` row exists for the authenticated Cognito
-// subject, so every route below can rely on the foreign key being valid.
+// Lazily ensures a local `users` row exists for the authenticated Supabase
+// user, so every route below can rely on the foreign key being valid.
 sessionRouter.use(async (req: AuthedRequest, res, next) => {
   try {
     await ensureUser(req.userId!);
@@ -149,8 +149,8 @@ sessionRouter.post("/:id/message", async (req: AuthedRequest, res, next) => {
   }
 });
 
-// Ends a session and kicks off the (currently in-process, step-4-will-be-SQS)
-// memory-profile summarization job — off the request path, response
+// Ends a session and kicks off the in-process memory-profile
+// summarization job (jobs/queue.ts) — off the request path, response
 // doesn't wait on it.
 sessionRouter.post("/:id/end", async (req: AuthedRequest, res, next) => {
   try {

@@ -9,8 +9,8 @@ Product terms (Slip, Soft Streak, Urge Event, Days Clean, etc.) are defined in t
 ## Repo Layout
 
 - `Untilt/` — iOS app source (SwiftUI). `Untilt.xcodeproj` uses folder-synced groups, so new files under `Untilt/` join the target automatically.
-- `Server/` — Node/TypeScript backend for Compass (Express, Postgres, SQS worker). Persona prompts, mode config and crisis detection live in `Server/src/ai/`.
-- `Infra/` — Terraform for AWS (VPC, ALB, ECS/Fargate, RDS, SQS, Cognito, ECR, GitHub OIDC). `terraform.tfvars` is local config; never print or commit secrets from it.
+- `Server/` — Node/TypeScript backend for Compass (Express, Postgres/pgvector), deployed to Render via `render.yaml`. Persona prompts, mode config and crisis detection live in `Server/src/ai/`.
+- `Infra/` — **retired** Terraform for the old AWS stack (torn down for cost, see `docs/adr/0004-leave-aws.md`). Reference only; don't apply. `terraform.tfvars` is local config; never print or commit secrets from it.
 - `Logic/` — `UntiltLogic` Swift package (pure, testable logic + `UntiltLogicTests`); run with `swift test` from `Logic/`.
 - `docs/` — architecture doc and ADRs (`docs/adr/`).
 - `.claude/` — project skills (`.claude/skills/`) and subagents (`.claude/agents/`).
@@ -19,8 +19,9 @@ Product terms (Slip, Soft Streak, Urge Event, Days Clean, etc.) are defined in t
 
 - **Pure SwiftUI + SwiftData** — no UIKit wrappers, no Combine (use async/await instead)
 - **Persistence**: SwiftData with CloudKit sync (`cloudKitDatabase: .automatic`)
-- **Auth**: Cognito Hosted UI via `ASWebAuthenticationSession` + PKCE (see `AuthService`)
-- **Backend**: REST API at `api.pinenoodle.com` behind an ALB, authenticated with Cognito access tokens (see `BackendService`)
+- **Auth**: Supabase Auth over REST: email/password, native Sign in with Apple (`id_token` grant), Google via `ASWebAuthenticationSession` + PKCE (see `AuthService`)
+- **Backend**: REST API on Render (URL in `AppConfig`), authenticated with Supabase access tokens verified against the project JWKS; database is Supabase Postgres (see `BackendService`, `docs/adr/0004-leave-aws.md`)
+- **Config**: environment-specific values (Supabase URL/publishable key, backend URL) live in `Untilt/Services/AppConfig.swift`
 - **AI chat**: `CompassConversation` (in `CompassService.swift`) talks to the backend, which calls Claude and runs crisis detection server-side (see `docs/adr/0003-backend-migration.md`). The app no longer calls the Claude API directly.
 - **Singletons**: Services use the `static let shared` pattern (`AuthService.shared`, `BackendService.shared`, `NotificationRouter.shared`). Exception: `CompassConversation` is one instance per chat presentation, not a singleton, because it holds a session ID.
 
@@ -37,7 +38,8 @@ Untilt/
 │   │   └── MilestoneRecord.swift
 │   └── MeditationSession.swift   # Static meditation catalogue
 ├── Services/
-│   ├── AuthService.swift          # Cognito PKCE auth
+│   ├── AppConfig.swift            # Supabase + backend URLs (public values)
+│   ├── AuthService.swift          # Supabase Auth (email, Apple, Google)
 │   ├── BackendService.swift       # REST + SSE streaming to backend
 │   ├── CompassService.swift       # CompassConversation: chat state via backend (SSE)
 │   └── NotificationRouter.swift   # Local notification deep-link routing
@@ -104,5 +106,5 @@ Always use design tokens from `UntiltTheme` instead of raw values:
 
 ## Sensitive Files
 - `APIKeys.swift` — contains the Claude API key (beta only, not committed)
-- `AuthService.swift` — Cognito client ID is a public OAuth client identifier (not a secret)
+- `AppConfig.swift` — Supabase publishable key is a public client key (not a secret); every table has RLS with no policies (`0003_enable_rls.sql`). Never put the Supabase service-role/secret key in the app.
 - Keychain storage for tokens is in `AuthService.swift` (`KeychainStore` private enum)

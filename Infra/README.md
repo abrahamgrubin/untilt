@@ -1,3 +1,7 @@
+> **Retired (2026-10).** The AWS stack was torn down to cut costs; the app now
+> runs on Supabase + Render — see `docs/adr/0004-leave-aws.md` and `render.yaml`.
+> Kept for reference only. Do not `terraform apply`.
+
 # Untilt Infrastructure (Terraform)
 
 Provisions the AWS side of the architecture doc: VPC, ECS/Fargate (API +

@@ -62,7 +62,7 @@ struct UntiltApp: App {
     }
 
     /// Routes untilt:// deep links: `gate` (launched by the iOS Shortcut)
-    /// and `auth-callback` (Cognito Hosted UI redirect — see AuthService).
+    /// and `auth-callback` (Google sign-in redirect via Supabase — see AuthService).
     /// ASWebAuthenticationSession's own completion handler catches the
     /// callback in the normal case; this is the fallback path for when the
     /// system delivers it via onOpenURL instead.

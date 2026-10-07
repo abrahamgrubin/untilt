@@ -3,7 +3,7 @@ import express from "express";
 import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 
-// --- Mocks: no network, no database, no Cognito ---------------------------
+// --- Mocks: no network, no database, no auth provider ---------------------------
 
 const completeChat = vi.fn();
 vi.mock("../src/ai/claude.js", () => ({

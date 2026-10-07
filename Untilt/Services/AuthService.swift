@@ -5,24 +5,15 @@ import Foundation
 import Security
 import UIKit
 
-// MARK: - Cognito configuration
-// Public client identifiers — not secrets (this is a public/native OAuth
-// client, generate_secret = false in Infra/cognito.tf). Safe to hardcode.
-private enum CognitoConfig {
-    static let domain = "untilt-staging.auth.us-east-1.amazoncognito.com"
-    static let clientId = "7f4o0dclthufht1hjgrbn8fpkd"
-    static let redirectURI = "untilt://auth-callback"
-    static let scopes = "openid email profile"
-}
-
 // MARK: - Auth Service
-// Cognito Hosted UI via ASWebAuthenticationSession + PKCE. Covers all three
-// sign-in paths uniformly (Apple, Google, local email/password) since the
-// Hosted UI itself presents the provider choice — the app only needs to
-// launch one URL and handle one callback shape, regardless of which
-// provider the user picks. See Infra/cognito.tf for the federated IdP setup
-// and docs/adr/0003-backend-migration.md for why Cognito replaced
-// CloudKit-only auth.
+// Supabase Auth, called over its REST API (no SDK dependency). Three
+// sign-in paths, all ending in the same Supabase session and access token,
+// which BackendService sends to the Untilt API:
+// - Email/password: direct password grant.
+// - Sign in with Apple: native sheet, then Supabase's id_token grant. No
+//   web flow, so no Apple Services ID or signing key to manage.
+// - Google: Supabase's hosted OAuth via ASWebAuthenticationSession + PKCE.
+// See docs/adr/0004-leave-aws.md for why this replaced Cognito.
 @MainActor
 final class AuthService: NSObject, ObservableObject {
 
@@ -31,33 +22,88 @@ final class AuthService: NSObject, ObservableObject {
     @Published private(set) var isSignedIn: Bool = false
 
     private var pendingCodeVerifier: String?
+    private var pendingAppleNonce: String?
     private var webAuthSession: ASWebAuthenticationSession?
+    /// Supabase rotates refresh tokens, so concurrent API calls must share
+    /// one refresh rather than each spending the same refresh token.
+    private var refreshTask: Task<String, Error>?
 
     private override init() {
         super.init()
-        isSignedIn = KeychainStore.readAccessToken() != nil
+        isSignedIn = KeychainStore.readSession() != nil
     }
 
-    // MARK: - Sign in
+    // MARK: - Email / password
 
-    func signIn() async throws {
-        let verifier = Self.generateCodeVerifier()
-        let challenge = Self.codeChallenge(for: verifier)
+    func signIn(email: String, password: String) async throws {
+        let session = try await requestSession(
+            path: "token",
+            query: [URLQueryItem(name: "grant_type", value: "password")],
+            body: ["email": email, "password": password]
+        )
+        completeSignIn(session)
+    }
+
+    enum SignUpResult {
+        case signedIn
+        /// The project requires email confirmation; the user has to tap
+        /// the link Supabase emailed before they can sign in.
+        case confirmationRequired
+    }
+
+    func signUp(email: String, password: String) async throws -> SignUpResult {
+        let data = try await post(path: "signup", query: [], body: ["email": email, "password": password])
+        // With confirmation off, signup returns a session; with it on, just the user.
+        guard let session = try? Self.decodeSession(data) else { return .confirmationRequired }
+        completeSignIn(session)
+        return .signedIn
+    }
+
+    // MARK: - Sign in with Apple (native)
+
+    /// Call from SignInWithAppleButton's onRequest. Returns the SHA-256 of a
+    /// fresh nonce for Apple's request; the raw nonce is kept for Supabase,
+    /// which checks that the two match.
+    func prepareAppleSignIn() -> String {
+        let rawNonce = Self.randomURLSafeString()
+        pendingAppleNonce = rawNonce
+        return SHA256.hash(data: Data(rawNonce.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    func signInWithApple(_ credential: ASAuthorizationAppleIDCredential) async throws {
+        guard
+            let tokenData = credential.identityToken,
+            let idToken = String(data: tokenData, encoding: .utf8)
+        else { throw AuthError.missingCode }
+        guard let nonce = pendingAppleNonce else { throw AuthError.missingVerifier }
+        pendingAppleNonce = nil
+
+        let session = try await requestSession(
+            path: "token",
+            query: [URLQueryItem(name: "grant_type", value: "id_token")],
+            body: ["provider": "apple", "id_token": idToken, "nonce": nonce]
+        )
+        completeSignIn(session)
+    }
+
+    // MARK: - Google (hosted OAuth + PKCE)
+
+    func signInWithGoogle() async throws {
+        let verifier = Self.randomURLSafeString()
+        let challenge = Data(SHA256.hash(data: Data(verifier.utf8))).base64URLEncodedString()
         pendingCodeVerifier = verifier
 
-        var components = URLComponents()
-        components.scheme = "https"
-        components.host = CognitoConfig.domain
-        components.path = "/login"
-        components.queryItems = [
-            URLQueryItem(name: "client_id", value: CognitoConfig.clientId),
-            URLQueryItem(name: "response_type", value: "code"),
-            URLQueryItem(name: "scope", value: CognitoConfig.scopes),
-            URLQueryItem(name: "redirect_uri", value: CognitoConfig.redirectURI),
-            URLQueryItem(name: "code_challenge_method", value: "S256"),
+        var components = URLComponents(
+            url: AppConfig.supabaseURL.appendingPathComponent("auth/v1/authorize"),
+            resolvingAgainstBaseURL: false
+        )
+        components?.queryItems = [
+            URLQueryItem(name: "provider", value: "google"),
+            URLQueryItem(name: "redirect_to", value: AppConfig.authRedirectURI),
             URLQueryItem(name: "code_challenge", value: challenge),
+            URLQueryItem(name: "code_challenge_method", value: "s256"),
         ]
-        guard let authURL = components.url else { throw AuthError.invalidAuthURL }
+        guard let authURL = components?.url else { throw AuthError.invalidAuthURL }
 
         let callbackURL = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
             let session = ASWebAuthenticationSession(
@@ -66,6 +112,8 @@ final class AuthService: NSObject, ObservableObject {
             ) { url, error in
                 if let url {
                     continuation.resume(returning: url)
+                } else if let error = error as? ASWebAuthenticationSessionError, error.code == .canceledLogin {
+                    continuation.resume(throwing: AuthError.cancelled)
                 } else {
                     continuation.resume(throwing: error ?? AuthError.cancelled)
                 }
@@ -85,31 +133,27 @@ final class AuthService: NSObject, ObservableObject {
     /// separate onOpenURL delivery.
     func handleCallback(_ url: URL) async throws {
         guard url.scheme == "untilt", url.host == "auth-callback" else { return }
-        guard
-            let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-            let code = components.queryItems?.first(where: { $0.name == "code" })?.value
-        else {
-            if let errorParam = URLComponents(url: url, resolvingAgainstBaseURL: false)?
-                .queryItems?.first(where: { $0.name == "error" })?.value {
+        let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        guard let code = items.first(where: { $0.name == "code" })?.value else {
+            if let errorParam = items.first(where: { $0.name == "error_description" || $0.name == "error" })?.value {
                 throw AuthError.provider(errorParam)
             }
             throw AuthError.missingCode
         }
-        guard let verifier = pendingCodeVerifier else { throw AuthError.missingVerifier }
+        // The other delivery path may already have used the verifier.
+        guard let verifier = pendingCodeVerifier else { return }
         pendingCodeVerifier = nil
 
-        try await exchangeCode(code, verifier: verifier)
+        let session = try await requestSession(
+            path: "token",
+            query: [URLQueryItem(name: "grant_type", value: "pkce")],
+            body: ["auth_code": code, "code_verifier": verifier]
+        )
+        completeSignIn(session)
     }
 
-    private func exchangeCode(_ code: String, verifier: String) async throws {
-        let tokens = try await requestTokens(body: [
-            "grant_type": "authorization_code",
-            "client_id": CognitoConfig.clientId,
-            "code": code,
-            "redirect_uri": CognitoConfig.redirectURI,
-            "code_verifier": verifier,
-        ])
-        KeychainStore.save(tokens: tokens)
+    private func completeSignIn(_ session: StoredSession) {
+        KeychainStore.save(session)
         // A new sign-in may be a different person on the same phone.
         DailyInsightCache.clear()
         isSignedIn = true
@@ -121,7 +165,7 @@ final class AuthService: NSObject, ObservableObject {
     /// close to expiring. Throws AuthError.signedOut if there's no session —
     /// callers should route the user back to sign-in in that case.
     func validAccessToken() async throws -> String {
-        guard let stored = KeychainStore.readTokens() else {
+        guard let stored = KeychainStore.readSession() else {
             isSignedIn = false
             throw AuthError.signedOut
         }
@@ -129,53 +173,29 @@ final class AuthService: NSObject, ObservableObject {
         if stored.expiresAt > Date().addingTimeInterval(60) {
             return stored.accessToken
         }
-        guard let refreshToken = stored.refreshToken else {
-            isSignedIn = false
-            throw AuthError.signedOut
+        if let refreshTask {
+            return try await refreshTask.value
         }
-        let tokens = try await requestTokens(body: [
-            "grant_type": "refresh_token",
-            "client_id": CognitoConfig.clientId,
-            "refresh_token": refreshToken,
-        ])
-        // Cognito's refresh grant doesn't return a new refresh_token — keep
-        // the existing one.
-        KeychainStore.save(tokens: (
-            accessToken: tokens.accessToken,
-            idToken: tokens.idToken,
-            refreshToken: refreshToken,
-            expiresAt: tokens.expiresAt
-        ))
-        return tokens.accessToken
-    }
 
-    private func requestTokens(body: [String: String]) async throws -> (accessToken: String, idToken: String, refreshToken: String?, expiresAt: Date) {
-        var request = URLRequest(url: URL(string: "https://\(CognitoConfig.domain)/oauth2/token")!)
-        request.httpMethod = "POST"
-        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        request.httpBody = body
-            .map { key, value in "\(key)=\(value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? value)" }
-            .joined(separator: "&")
-            .data(using: .utf8)
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            isSignedIn = false
-            throw AuthError.tokenExchangeFailed((response as? HTTPURLResponse)?.statusCode ?? 0)
+        let task = Task { () throws -> String in
+            do {
+                let session = try await requestSession(
+                    path: "token",
+                    query: [URLQueryItem(name: "grant_type", value: "refresh_token")],
+                    body: ["refresh_token": stored.refreshToken]
+                )
+                KeychainStore.save(session)
+                return session.accessToken
+            } catch AuthError.server(let status, _) where (400..<500).contains(status) {
+                // Refresh token revoked or expired: the session is over.
+                // Network errors fall through without signing out.
+                signOut()
+                throw AuthError.signedOut
+            }
         }
-        struct TokenResponse: Decodable {
-            let access_token: String
-            let id_token: String
-            let refresh_token: String?
-            let expires_in: Int
-        }
-        let decoded = try JSONDecoder().decode(TokenResponse.self, from: data)
-        return (
-            decoded.access_token,
-            decoded.id_token,
-            decoded.refresh_token,
-            Date().addingTimeInterval(TimeInterval(decoded.expires_in))
-        )
+        refreshTask = task
+        defer { refreshTask = nil }
+        return try await task.value
     }
 
     // MARK: - Sign out
@@ -186,17 +206,61 @@ final class AuthService: NSObject, ObservableObject {
         isSignedIn = false
     }
 
-    // MARK: - PKCE helpers
+    // MARK: - Supabase Auth REST
 
-    private static func generateCodeVerifier() -> String {
+    private func requestSession(path: String, query: [URLQueryItem], body: [String: String]) async throws -> StoredSession {
+        try Self.decodeSession(try await post(path: path, query: query, body: body))
+    }
+
+    private func post(path: String, query: [URLQueryItem], body: [String: String]) async throws -> Data {
+        var components = URLComponents(
+            url: AppConfig.supabaseURL.appendingPathComponent("auth/v1/\(path)"),
+            resolvingAgainstBaseURL: false
+        )
+        if !query.isEmpty { components?.queryItems = query }
+        guard let url = components?.url else { throw AuthError.invalidAuthURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(AppConfig.supabasePublishableKey, forHTTPHeaderField: "apikey")
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard (200...299).contains(status) else {
+            throw AuthError.server(status, Self.errorMessage(from: data))
+        }
+        return data
+    }
+
+    private static func decodeSession(_ data: Data) throws -> StoredSession {
+        struct TokenResponse: Decodable {
+            let access_token: String
+            let refresh_token: String
+            let expires_in: Int
+        }
+        let decoded = try JSONDecoder().decode(TokenResponse.self, from: data)
+        return StoredSession(
+            accessToken: decoded.access_token,
+            refreshToken: decoded.refresh_token,
+            expiresAt: Date().addingTimeInterval(TimeInterval(decoded.expires_in))
+        )
+    }
+
+    /// Supabase has returned errors as both `{msg}` and
+    /// `{error, error_description}` across versions.
+    private static func errorMessage(from data: Data) -> String? {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        return (json["msg"] ?? json["error_description"] ?? json["message"]) as? String
+    }
+
+    // MARK: - Random helpers
+
+    private static func randomURLSafeString() -> String {
         var bytes = [UInt8](repeating: 0, count: 32)
         _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
         return Data(bytes).base64URLEncodedString()
-    }
-
-    private static func codeChallenge(for verifier: String) -> String {
-        let hashed = SHA256.hash(data: Data(verifier.utf8))
-        return Data(hashed).base64URLEncodedString()
     }
 }
 
@@ -219,8 +283,15 @@ enum AuthError: Error {
     case missingCode
     case missingVerifier
     case signedOut
-    case tokenExchangeFailed(Int)
+    /// Non-2xx from Supabase Auth, with its message when it sent one.
+    case server(Int, String?)
     case provider(String)
+}
+
+private struct StoredSession {
+    let accessToken: String
+    let refreshToken: String
+    let expiresAt: Date
 }
 
 private extension Data {
@@ -235,14 +306,13 @@ private extension Data {
 // MARK: - Keychain token storage
 private enum KeychainStore {
     private static let service = "com.untilt.auth"
-    private static let account = "cognito-tokens"
+    private static let account = "supabase-session"
 
-    static func save(tokens: (accessToken: String, idToken: String, refreshToken: String?, expiresAt: Date)) {
+    static func save(_ session: StoredSession) {
         let payload: [String: Any] = [
-            "accessToken": tokens.accessToken,
-            "idToken": tokens.idToken,
-            "refreshToken": tokens.refreshToken as Any,
-            "expiresAt": tokens.expiresAt.timeIntervalSince1970,
+            "accessToken": session.accessToken,
+            "refreshToken": session.refreshToken,
+            "expiresAt": session.expiresAt.timeIntervalSince1970,
         ]
         guard let data = try? JSONSerialization.data(withJSONObject: payload) else { return }
 
@@ -258,7 +328,7 @@ private enum KeychainStore {
         SecItemAdd(attributes as CFDictionary, nil)
     }
 
-    static func readTokens() -> (accessToken: String, idToken: String, refreshToken: String?, expiresAt: Date)? {
+    static func readSession() -> StoredSession? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -271,22 +341,22 @@ private enum KeychainStore {
               let data = result as? Data,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let accessToken = json["accessToken"] as? String,
-              let idToken = json["idToken"] as? String,
+              let refreshToken = json["refreshToken"] as? String,
               let expiresAtRaw = json["expiresAt"] as? Double
         else { return nil }
-        return (accessToken, idToken, json["refreshToken"] as? String, Date(timeIntervalSince1970: expiresAtRaw))
+        return StoredSession(accessToken: accessToken, refreshToken: refreshToken, expiresAt: Date(timeIntervalSince1970: expiresAtRaw))
     }
 
-    static func readAccessToken() -> String? {
-        readTokens()?.accessToken
-    }
-
+    /// Removes this session and any token left over from the Cognito era,
+    /// which no longer validates against anything.
     static func clear() {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-        ]
-        SecItemDelete(query as CFDictionary)
+        for account in [account, "cognito-tokens"] {
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                kSecAttrAccount as String: account,
+            ]
+            SecItemDelete(query as CFDictionary)
+        }
     }
 }

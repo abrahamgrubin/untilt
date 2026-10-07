@@ -15,8 +15,8 @@ app.use(
   pinoHttp({
     level: env.NODE_ENV === "production" ? "info" : "debug",
     // Crisis-detection events are logged with a distinct `event: "crisis_detected"`
-    // field (see routes/session.ts) so they're easy to isolate in CloudWatch
-    // Logs Insights for auditing — see the architecture doc, Section 5.
+    // field (see routes/session.ts) so they're easy to isolate in the host's log search
+    // for auditing — see the architecture doc, Section 5.
   })
 );
 

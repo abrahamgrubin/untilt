@@ -1,0 +1,34 @@
+# Render Blueprint for the Untilt API (docs/adr/0004-leave-aws.md).
+# Render → New → Blueprint → pick this repo. Secrets marked `sync: false`
+# are entered in the dashboard and never committed.
+services:
+  - type: web
+    name: untilt-api
+    runtime: node
+    rootDir: Server
+    # Starter ($7/mo) stays warm. The free plan sleeps after 15 idle minutes
+    # and takes ~1 min to wake, which is bad for an urge-surfing session.
+    plan: starter
+    region: ohio
+    # --include=dev: NODE_ENV=production would otherwise skip TypeScript.
+    buildCommand: npm ci --include=dev && npm run build
+    # Migrations run on boot: they're idempotent (schema_migrations), and
+    # Render's pre-deploy hook isn't available on every plan.
+    startCommand: npm run migrate:prod && npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "20"
+      - key: DB_SSL
+        value: "true"
+      - key: SUPABASE_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: VOYAGE_API_KEY
+        sync: false

@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Backend Service
 // Talks to the real Untilt backend (Server/) instead of calling Anthropic
 // directly from the client — see docs/adr/0003-backend-migration.md. Every
-// request is authenticated with a Cognito access token from AuthService.
+// request is authenticated with a Supabase access token from AuthService.
 
 enum CompassMode: String {
     case urgeSurfing = "urge_surfing"
@@ -93,9 +93,8 @@ actor BackendService {
 
     static let shared = BackendService()
 
-    // The real backend, behind HTTPS (Infra/alb.tf + api.pinenoodle.com —
-    // see the architecture doc's Section 9 for the ACM/DNS setup).
-    private let baseURL = URL(string: "https://api.pinenoodle.com")!
+    // The Untilt API on Render (see AppConfig and render.yaml).
+    private let baseURL = AppConfig.backendURL
 
     // MARK: - Session lifecycle
 
