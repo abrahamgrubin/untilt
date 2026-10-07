@@ -35,13 +35,26 @@ export async function summarizeSessionAndUpdateProfile(sessionId: string, userId
     maxTokens: 300,
   });
 
+  let updated: MemoryProfile;
   try {
-    const updated = JSON.parse(raw) as MemoryProfile;
+    updated = JSON.parse(raw) as MemoryProfile;
+  } catch {
+    // Don't let a malformed model response corrupt the profile: skip this
+    // update. Never log `raw`; it's the user's triggers, coping strategies
+    // and crisis flag.
+    console.error(`summarizeSessionAndUpdateProfile: model output wasn't JSON (${raw.length} chars)`);
+    return;
+  }
+
+  // The user may have deleted their Compass history or their account while
+  // the model call was running. Don't recreate a profile for either.
+  if (!(await getSession(sessionId, userId))) return;
+
+  try {
     await upsertMemoryProfile(userId, updated);
   } catch (err) {
-    // Don't let a malformed model response corrupt the profile — log and
-    // skip this update rather than throwing, since this runs off the
-    // request path with no one waiting on the result.
-    console.error("summarizeSessionAndUpdateProfile: failed to parse model output", err, raw);
+    // 23503: the user row is gone (account deleted mid-job). Nothing to do.
+    if ((err as { code?: string }).code === "23503") return;
+    console.error("summarizeSessionAndUpdateProfile: profile write failed", (err as Error).message);
   }
 }

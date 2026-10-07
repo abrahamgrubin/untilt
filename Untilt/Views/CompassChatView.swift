@@ -17,6 +17,7 @@ struct CompassChatView: View {
 
     @State private var inputText = ""
     @State private var showBoxBreathing = false
+    @AppStorage(CompassConsent.storageKey) private var compassEnabled = false
 
     /// Which of the three PRD modes this conversation is in. HomeView's
     /// "Ask Compass" entry point doesn't yet offer mode selection in the
@@ -36,6 +37,17 @@ struct CompassChatView: View {
     private var errorMessage: String? { conversation.errorMessage }
 
     var body: some View {
+        if compassEnabled {
+            chat
+        } else {
+            CompassConsentView(
+                onAgree: { compassEnabled = true },
+                onDecline: { dismiss() }
+            )
+        }
+    }
+
+    private var chat: some View {
         VStack(spacing: 0) {
             // Navigation bar
             HStack {
@@ -444,7 +456,7 @@ private struct FollowUpConsentBubble: View {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, _ in
             guard granted else { return }
             let notifContent = UNMutableNotificationContent()
-            notifContent.title = "Checking in on your therapist search"
+            notifContent.title = "A gentle check-in"  // neutral: shows on the lock screen
             notifContent.body = "Have you heard back yet? It might help to follow up with them -- or if not, there are other therapists nearby too."
             notifContent.userInfo = ["deepLink": "compass"]
             notifContent.sound = .default

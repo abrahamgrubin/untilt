@@ -125,22 +125,24 @@ struct SignInView: View {
             .frame(height: UntiltTheme.Size.buttonHeight)
             .clipShape(RoundedRectangle(cornerRadius: UntiltTheme.Radius.lg))
 
-            Button {
-                run { try await auth.signInWithGoogle() }
-            } label: {
-                Text("Continue with Google")
-                    .font(UntiltTheme.Font.body.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: UntiltTheme.Size.buttonHeight)
-                    .foregroundStyle(UntiltTheme.Color.slate)
-                    .background(UntiltTheme.Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: UntiltTheme.Radius.lg))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: UntiltTheme.Radius.lg)
-                            .stroke(UntiltTheme.Color.border, lineWidth: 1)
-                    )
+            if AppConfig.googleSignInEnabled {
+                Button {
+                    run { try await auth.signInWithGoogle() }
+                } label: {
+                    Text("Continue with Google")
+                        .font(UntiltTheme.Font.body.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: UntiltTheme.Size.buttonHeight)
+                        .foregroundStyle(UntiltTheme.Color.slate)
+                        .background(UntiltTheme.Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: UntiltTheme.Radius.lg))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: UntiltTheme.Radius.lg)
+                                .stroke(UntiltTheme.Color.border, lineWidth: 1)
+                        )
+                }
+                .disabled(isWorking)
             }
-            .disabled(isWorking)
         }
     }
 

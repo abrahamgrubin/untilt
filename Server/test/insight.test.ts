@@ -19,7 +19,8 @@ vi.mock("../src/middleware/auth.js", () => ({
   },
 }));
 
-vi.mock("../src/db/repositories/users.js", () => ({ ensureUser: vi.fn(async () => {}) }));
+let accountDeleted = false;
+vi.mock("../src/db/repositories/users.js", () => ({ ensureUser: vi.fn(async () => !accountDeleted) }));
 
 const memoryProfile = { triggers: ["late-night games"], copingStrategies: ["box breathing"], pastCrisisFlags: false, tonePreferences: "" };
 vi.mock("../src/db/repositories/memoryProfile.js", () => ({
@@ -160,6 +161,7 @@ afterAll(() => {
 beforeEach(() => {
   store.clear();
   recentCrisis = false;
+  accountDeleted = false;
   completeChat.mockReset();
 });
 
@@ -243,5 +245,48 @@ describe("POST /insight", () => {
     completeChat.mockResolvedValue(JSON.stringify(goodCard));
     expect((await post({ ...snapshot, journal: "SECRET JOURNAL TEXT" })).status).toBe(200);
     expect(completeChat.mock.calls[0][0].messages[0].content).not.toContain("SECRET JOURNAL TEXT");
+  });
+});
+
+const postCheckIn = (body: unknown) =>
+  fetch(`${baseUrl}/insight/check-in`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+
+describe("POST /insight/check-in", () => {
+  it("returns 204 with no recent crisis, and never calls Claude", async () => {
+    const res = await postCheckIn({ localDate: today });
+    expect(res.status).toBe(204);
+    expect(completeChat).not.toHaveBeenCalled();
+  });
+
+  it("serves the check-in card with helplines after a recent crisis, without Claude", async () => {
+    recentCrisis = true;
+    const res = await postCheckIn({ localDate: today });
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.kind).toBe("check_in");
+    expect(json.resources.length).toBeGreaterThan(0);
+    expect(completeChat).not.toHaveBeenCalled();
+  });
+
+  it("doesn't reveal an AI insight generated earlier the same day", async () => {
+    completeChat.mockResolvedValue(JSON.stringify(goodCard));
+    await post(snapshot);
+    const res = await postCheckIn({ localDate: today });
+    expect(res.status).toBe(204);
+  });
+
+  it("rejects an implausible date", async () => {
+    const res = await postCheckIn({ localDate: "2001-01-01" });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("deleted accounts", () => {
+  it("are refused with 401 instead of being recreated", async () => {
+    accountDeleted = true;
+    const res = await post(snapshot);
+    expect(res.status).toBe(401);
+    expect((await res.json()).error).toBe("account_deleted");
+    expect(completeChat).not.toHaveBeenCalled();
   });
 });

@@ -27,6 +27,10 @@ final class NotificationRouter: NSObject, ObservableObject, UNUserNotificationCe
     /// clears it.
     @Published var pendingCompassContext: String?
 
+    /// Set when a notification tap should open the Resources tab (the slip
+    /// check-in when Compass is off). RootView observes and clears it.
+    @Published var pendingOpenResources = false
+
     private override init() {
         super.init()
     }
@@ -43,6 +47,8 @@ final class NotificationRouter: NSObject, ObservableObject, UNUserNotificationCe
             // written for the notification itself (slip check-in or
             // therapist follow-up) rather than duplicating it here.
             pendingCompassContext = response.notification.request.content.body
+        } else if userInfo["deepLink"] as? String == "resources" {
+            pendingOpenResources = true
         }
         completionHandler()
     }

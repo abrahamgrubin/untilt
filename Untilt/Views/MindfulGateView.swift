@@ -43,12 +43,21 @@ extension MindfulGateView {
     }
 
     private func scheduleSlipCheckIn() {
+        // With Compass off, don't promise Compass (it would open the consent
+        // screen); send them to Resources, where the helplines are.
+        let compassEnabled = UserDefaults.standard.bool(forKey: CompassConsent.storageKey)
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, _ in
             guard granted else { return }
             let content = UNMutableNotificationContent()
-            content.title = "Looks like you had a tough moment"
-            content.body = "Compass is here whenever you're ready to talk."
-            content.userInfo = ["deepLink": "compass"]
+            // Neutral wording: this shows on the lock screen.
+            content.title = "A gentle check-in"
+            if compassEnabled {
+                content.body = "Compass is here whenever you're ready to talk."
+                content.userInfo = ["deepLink": "compass"]
+            } else {
+                content.body = "Support is here whenever you're ready."
+                content.userInfo = ["deepLink": "resources"]
+            }
             content.sound = .default
 
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 60, repeats: false)

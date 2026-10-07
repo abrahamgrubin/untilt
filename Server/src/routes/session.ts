@@ -19,7 +19,11 @@ sessionRouter.use(requireAuth);
 // user, so every route below can rely on the foreign key being valid.
 sessionRouter.use(async (req: AuthedRequest, res, next) => {
   try {
-    await ensureUser(req.userId!);
+    if (!(await ensureUser(req.userId!))) {
+      // Recently deleted account whose token hasn't expired yet.
+      res.status(401).json({ error: "account_deleted" });
+      return;
+    }
     next();
   } catch (err) {
     next(err);
@@ -90,8 +94,9 @@ sessionRouter.post("/:id/message", async (req: AuthedRequest, res, next) => {
         event: "crisis_detected",
         source: crisis.source,
         classifierFailed: crisis.classifierFailed ?? false,
+        // No user id: logs live outside account deletion, and the
+        // crisis_events row (deleted with the account) is the audit record.
         sessionId: session.id,
-        userId: req.userId,
       },
       "crisis signal detected"
     );

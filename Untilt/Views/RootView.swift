@@ -19,6 +19,11 @@ struct RootView: View {
         .onChange(of: notificationRouter.pendingCompassContext, initial: true) { _, context in
             if context != nil { selectedTab = .today }
         }
+        .onChange(of: notificationRouter.pendingOpenResources, initial: true) { _, open in
+            guard open else { return }
+            selectedTab = .resources
+            notificationRouter.pendingOpenResources = false
+        }
     }
 
     @ViewBuilder

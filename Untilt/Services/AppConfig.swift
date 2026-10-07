@@ -22,4 +22,16 @@ enum AppConfig {
     /// Where Supabase sends the user back after Google sign-in. Must be
     /// listed under Authentication → URL Configuration → Redirect URLs.
     static let authRedirectURI = "untilt://auth-callback"
+
+    /// Shown in Settings and required in App Store Connect. Must be a live
+    /// page before submitting for review.
+    static let privacyPolicyURL = URL(string: "https://YOUR-DOMAIN/privacy")!
+
+    /// Settings → Contact Support. Also the Support URL in App Store Connect.
+    static let supportURL = URL(string: "mailto:YOUR-SUPPORT-EMAIL")!
+
+    /// Shows "Continue with Google" on the sign-in screen. Leave off until the
+    /// Google provider is configured in Supabase: a button that errors is
+    /// grounds for rejection (Guideline 2.1).
+    static let googleSignInEnabled = false
 }

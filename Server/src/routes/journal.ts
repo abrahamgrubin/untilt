@@ -15,7 +15,11 @@ export const journalRouter = Router();
 journalRouter.use(requireAuth);
 journalRouter.use(async (req: AuthedRequest, res, next) => {
   try {
-    await ensureUser(req.userId!);
+    if (!(await ensureUser(req.userId!))) {
+      // Recently deleted account whose token hasn't expired yet.
+      res.status(401).json({ error: "account_deleted" });
+      return;
+    }
     next();
   } catch (err) {
     next(err);

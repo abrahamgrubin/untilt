@@ -20,6 +20,10 @@ final class AuthService: NSObject, ObservableObject {
     static let shared = AuthService()
 
     @Published private(set) var isSignedIn: Bool = false
+    /// Supabase user id (`sub`) of the signed-in user. ContentView uses it to
+    /// erase on-device history when a different person signs in.
+    @Published private(set) var userId: String?
+    @Published private(set) var email: String?
 
     private var pendingCodeVerifier: String?
     private var pendingAppleNonce: String?
@@ -30,7 +34,9 @@ final class AuthService: NSObject, ObservableObject {
 
     private override init() {
         super.init()
-        isSignedIn = KeychainStore.readSession() != nil
+        let session = KeychainStore.readSession()
+        isSignedIn = session != nil
+        if let session { updateIdentity(from: session.accessToken) }
     }
 
     // MARK: - Email / password
@@ -156,7 +162,25 @@ final class AuthService: NSObject, ObservableObject {
         KeychainStore.save(session)
         // A new sign-in may be a different person on the same phone.
         DailyInsightCache.clear()
+        updateIdentity(from: session.accessToken)
         isSignedIn = true
+    }
+
+    /// Reads `sub` and `email` from the access token's payload. Display and
+    /// device-ownership only; the server does the real verification.
+    private func updateIdentity(from accessToken: String) {
+        let parts = accessToken.split(separator: ".")
+        guard parts.count == 3 else { return }
+        var base64 = String(parts[1])
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        base64 += String(repeating: "=", count: (4 - base64.count % 4) % 4)
+        guard
+            let data = Data(base64Encoded: base64),
+            let claims = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return }
+        userId = claims["sub"] as? String
+        email = claims["email"] as? String
     }
 
     // MARK: - Token access (used by BackendService on every API call)
@@ -204,6 +228,8 @@ final class AuthService: NSObject, ObservableObject {
         KeychainStore.clear()
         DailyInsightCache.clear()
         isSignedIn = false
+        userId = nil
+        email = nil
     }
 
     // MARK: - Supabase Auth REST

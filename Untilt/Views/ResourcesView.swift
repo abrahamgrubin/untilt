@@ -5,6 +5,8 @@ import SwiftUI
 
 struct ResourcesView: View {
     @State private var showFindTherapist = false
+    @State private var showTherapistSearch = false
+    @AppStorage(CompassConsent.storageKey) private var compassEnabled = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -12,6 +14,10 @@ struct ResourcesView: View {
                 crisisSection
                 therapySection
 //                educationSection
+
+                Text("Untilt and Compass support recovery but aren't a substitute for professional treatment. Compass is an AI coach, not a therapist.")
+                    .font(UntiltTheme.Font.caption)
+                    .foregroundStyle(UntiltTheme.Color.muted)
             }
             .padding(.horizontal, UntiltTheme.Spacing.s5)
             .padding(.top, UntiltTheme.Spacing.s5)
@@ -21,6 +27,11 @@ struct ResourcesView: View {
         .navigationTitle("Resources")
         .sheet(isPresented: $showFindTherapist) {
             CompassChatView(entryAction: .findTherapist)
+        }
+        // With Compass off, go straight to the directory rather than the
+        // AI consent screen: the zip-code flow never used AI anyway.
+        .sheet(isPresented: $showTherapistSearch) {
+            SafariView(url: URL(string: "https://www.psychologytoday.com/us/therapists/gambling")!)
         }
     }
 
@@ -71,7 +82,11 @@ struct ResourcesView: View {
             // (?category=gambling), rather than the generic, unlocalized
             // /us/therapists/gambling topic page.
             Button {
-                showFindTherapist = true
+                if compassEnabled {
+                    showFindTherapist = true
+                } else {
+                    showTherapistSearch = true
+                }
             } label: {
                 ResourceLinkCardContent(
                     title: "Psychology Today — Therapist Finder",

@@ -11,7 +11,13 @@ and `docs/adr/0004-leave-aws.md` for why it's no longer on AWS.
 - `GET /health` — unauthenticated liveness check (Render health check).
 - `POST /session`, `POST /session/:id/message` (SSE), `POST /session/:id/end`
 - `POST /journal`
-- `POST /insight`
+- `POST /insight`, `POST /insight/check-in` (post-crisis check-in only, no AI;
+  used when Compass is off)
+- `DELETE /account` — permanently deletes the user's data and Supabase login
+  (App Store Guideline 5.1.1(v)). Needs `SUPABASE_SECRET_KEY`; returns 503
+  without it.
+- `DELETE /account/compass-data` — deletes Compass conversations, notes and
+  insights, keeping the account (turning Compass off with "delete history").
 
 Everything except `/health` requires a Supabase access token
 (`Authorization: Bearer …`), verified against the project's JWKS in
@@ -48,7 +54,9 @@ Everything except `/health` requires a Supabase access token
 1. Render → **New → Blueprint** → connect this GitHub repo. It reads
    `render.yaml` at the repo root.
 2. Fill in the secret env vars it asks for: `SUPABASE_URL`, `DATABASE_URL`,
-   `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`.
+   `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`, and `SUPABASE_SECRET_KEY` (Supabase
+   → Project Settings → API Keys → secret key; server-only, used for
+   account deletion).
 3. Deploy. Migrations run on boot. Check
    `https://<service>.onrender.com/health` returns `{"status":"ok"}`.
 4. Put that URL in `AppConfig.backendURL` in the iOS app.

@@ -23,7 +23,9 @@ struct UntiltApp: App {
         let config = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: false,
-            cloudKitDatabase: .automatic
+            // Explicitly local. Server data is the synced copy (ADR 0003), and
+            // LocalDataStore's per-device erase assumes nothing syncs via iCloud.
+            cloudKitDatabase: .none
         )
         do {
             return try ModelContainer(for: schema, configurations: [config])

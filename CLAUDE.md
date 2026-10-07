@@ -18,7 +18,7 @@ Product terms (Slip, Soft Streak, Urge Event, Days Clean, etc.) are defined in t
 ## Architecture
 
 - **Pure SwiftUI + SwiftData** — no UIKit wrappers, no Combine (use async/await instead)
-- **Persistence**: SwiftData with CloudKit sync (`cloudKitDatabase: .automatic`)
+- **Persistence**: SwiftData, on-device only (`cloudKitDatabase: .none`). On-device history isn't tied to an account; `LocalDataStore` erases it when a different account signs in or the account is deleted
 - **Auth**: Supabase Auth over REST: email/password, native Sign in with Apple (`id_token` grant), Google via `ASWebAuthenticationSession` + PKCE (see `AuthService`)
 - **Backend**: REST API on Render (URL in `AppConfig`), authenticated with Supabase access tokens verified against the project JWKS; database is Supabase Postgres (see `BackendService`, `docs/adr/0004-leave-aws.md`)
 - **Config**: environment-specific values (Supabase URL/publishable key, backend URL) live in `Untilt/Services/AppConfig.swift`
@@ -42,6 +42,7 @@ Untilt/
 │   ├── AuthService.swift          # Supabase Auth (email, Apple, Google)
 │   ├── BackendService.swift       # REST + SSE streaming to backend
 │   ├── CompassService.swift       # CompassConversation: chat state via backend (SSE)
+│   ├── LocalDataStore.swift       # Erases on-device data when a different account signs in / on deletion
 │   └── NotificationRouter.swift   # Local notification deep-link routing
 ├── Theme/
 │   └── UntiltTheme.swift          # Design tokens (colors, fonts, spacing, radii)
@@ -99,6 +100,7 @@ Always use design tokens from `UntiltTheme` instead of raw values:
 - Responses are 2–4 sentences unless the user asks for more
 - When Compass mentions "box breathing" / "breathing exercise" etc., the chat view detects it client-side and shows an inline button to launch `BoxBreathingView`
 - Crisis resources (1-800-522-4700, text 988) are surfaced when the user signals acute distress
+- Nothing is sent to Claude until the user agrees in `CompassConsentView` (`@AppStorage(CompassConsent.storageKey)`; App Store Guideline 5.1.2(i)). Gates both the chat and the Today insight; revocable in `SettingsView`. Keep its "what gets sent" text accurate if data flows change.
 
 ### Notifications
 - `NotificationRouter` is the `UNUserNotificationCenterDelegate`, registered at app launch

@@ -242,6 +242,49 @@ actor BackendService {
         return try JSONDecoder().decode(DailyInsight.self, from: data)
     }
 
+    /// Just the post-crisis check-in card, for when Compass is off: no model
+    /// call server-side. nil when there's nothing to show (204).
+    func fetchCheckIn(localDate: String) async throws -> DailyInsight? {
+        var request = try await authedRequest(path: "/insight/check-in", method: "POST")
+        request.httpBody = try JSONEncoder().encode(["localDate": localDate])
+        let (data, response) = try await URLSession.shared.data(for: request)
+        if (response as? HTTPURLResponse)?.statusCode == 204 { return nil }
+        try Self.checkOK(response, data: data)
+        return try JSONDecoder().decode(DailyInsight.self, from: data)
+    }
+
+    // MARK: - Account
+
+    /// Deletes Compass's conversations, notes and insights on the server,
+    /// keeping the account (Settings → turn off Compass → delete history).
+    func deleteCompassData() async throws {
+        let request = try await authedRequest(path: "/account/compass-data", method: "DELETE")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try Self.checkOK(response, data: data)
+    }
+
+    enum AccountDeletionError: Error {
+        /// The server isn't configured to delete logins yet (503).
+        case unavailable
+        /// Data was deleted but the login wasn't (502); retrying finishes it.
+        case partial
+        case failed
+    }
+
+    /// Permanently deletes the account and everything the server holds for
+    /// it (Server/src/routes/account.ts). The caller then signs out and
+    /// erases on-device data.
+    func deleteAccount() async throws {
+        let request = try await authedRequest(path: "/account", method: "DELETE")
+        let (_, response) = try await URLSession.shared.data(for: request)
+        switch (response as? HTTPURLResponse)?.statusCode {
+        case 204: return
+        case 503: throw AccountDeletionError.unavailable
+        case 502: throw AccountDeletionError.partial
+        default: throw AccountDeletionError.failed
+        }
+    }
+
     // MARK: - Shared request building
 
     private func authedRequest(path: String, method: String) async throws -> URLRequest {

@@ -12,6 +12,11 @@ const envSchema = z.object({
   // Only for projects still on the legacy shared-secret (HS256) signing.
   // Leave unset on projects using asymmetric signing keys (the default).
   SUPABASE_JWT_SECRET: z.string().optional(),
+  // Secret key (`sb_secret_…`, or legacy service_role) for the Auth admin
+  // API. Server-only; never ship it in the app. Used solely to delete a
+  // user's login when they delete their account (routes/account.ts), which
+  // returns 503 if this is unset.
+  SUPABASE_SECRET_KEY: z.string().optional(),
 
   ANTHROPIC_API_KEY: z.string().min(1, "ANTHROPIC_API_KEY is required"),
   VOYAGE_API_KEY: z.string().min(1, "VOYAGE_API_KEY is required"),
